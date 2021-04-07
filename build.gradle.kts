@@ -160,6 +160,8 @@ subprojects {
 
                     // AutoValueImmutableFields suggests returning Guava types from API methods
                     disable("AutoValueImmutableFields")
+                    // Suggests using Guava types for fields but we don't use Guava
+                    disable("ImmutableMemberCollection")
                     // "-Xep:AutoValueImmutableFields:OFF"
 
                     // Fully qualified names may be necessary when deprecating a class to avoid
@@ -317,6 +319,7 @@ subprojects {
             add(TEST_COMPILE_ONLY_CONFIGURATION_NAME, "com.google.code.findbugs:jsr305")
 
             add(TEST_IMPLEMENTATION_CONFIGURATION_NAME, "org.junit.jupiter:junit-jupiter-api")
+            add(TEST_IMPLEMENTATION_CONFIGURATION_NAME, "org.junit.jupiter:junit-jupiter-params")
             add(TEST_IMPLEMENTATION_CONFIGURATION_NAME, "nl.jqno.equalsverifier:equalsverifier")
             add(TEST_IMPLEMENTATION_CONFIGURATION_NAME, "org.mockito:mockito-core")
             add(TEST_IMPLEMENTATION_CONFIGURATION_NAME, "org.mockito:mockito-junit-jupiter")

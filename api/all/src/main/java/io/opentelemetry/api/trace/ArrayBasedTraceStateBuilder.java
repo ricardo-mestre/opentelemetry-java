@@ -5,6 +5,7 @@
 
 package io.opentelemetry.api.trace;
 
+import io.opentelemetry.api.internal.StringUtils;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -125,8 +126,9 @@ final class ArrayBasedTraceStateBuilder implements TraceStateBuilder {
         if (i > MAX_TENANT_ID_SIZE) {
           return false;
         }
-        // vendor id (the part to the right of the '@' sign) must be 13 characters or less
-        if (key.length() - i > MAX_VENDOR_ID_SIZE) {
+        // vendor id (the part to the right of the '@' sign) must be 1-13 characters long
+        int remainingKeyChars = key.length() - i - 1;
+        if (remainingKeyChars > MAX_VENDOR_ID_SIZE || remainingKeyChars == 0) {
           return false;
         }
       }
@@ -158,7 +160,7 @@ final class ArrayBasedTraceStateBuilder implements TraceStateBuilder {
   // Value is opaque string up to 256 characters printable ASCII RFC0020 characters (i.e., the range
   // 0x20 to 0x7E) except comma , and =.
   private static boolean isValueValid(@Nullable String value) {
-    if (value == null) {
+    if (StringUtils.isNullOrEmpty(value)) {
       return false;
     }
     if (value.length() > VALUE_MAX_SIZE || value.charAt(value.length() - 1) == ' ' /* '\u0020' */) {

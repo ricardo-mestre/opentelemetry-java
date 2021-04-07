@@ -15,6 +15,8 @@ import com.linecorp.armeria.common.RequestHeadersBuilder;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.annotation.Blocking;
 import com.linecorp.armeria.server.annotation.Post;
+import com.linecorp.armeria.server.healthcheck.HealthCheckService;
+import com.linecorp.armeria.server.logging.LoggingService;
 import io.netty.util.AsciiString;
 import io.opentelemetry.api.OpenTelemetry;
 import io.opentelemetry.api.trace.Span;
@@ -23,6 +25,7 @@ import io.opentelemetry.context.Context;
 import io.opentelemetry.context.propagation.ContextPropagators;
 import io.opentelemetry.context.propagation.TextMapGetter;
 import io.opentelemetry.context.propagation.TextMapSetter;
+import io.opentelemetry.sdk.OpenTelemetrySdk;
 import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -37,8 +40,9 @@ public final class Application {
 
   static {
     openTelemetry =
-        OpenTelemetry.propagating(
-            ContextPropagators.create(W3CTraceContextPropagator.getInstance()));
+        OpenTelemetrySdk.builder()
+            .setPropagators(ContextPropagators.create(W3CTraceContextPropagator.getInstance()))
+            .build();
   }
 
   private enum ArmeriaGetter implements TextMapGetter<RequestHeaders> {
@@ -120,7 +124,13 @@ public final class Application {
 
   /** Entry point. */
   public static void main(String[] args) {
-    Server server = Server.builder().http(5000).annotatedService(new Service()).build();
+    Server server =
+        Server.builder()
+            .http(5000)
+            .annotatedService(new Service())
+            .service("/health", HealthCheckService.of())
+            .decorator(LoggingService.newDecorator())
+            .build();
     server.start().join();
     Runtime.getRuntime().addShutdownHook(new Thread(() -> server.stop().join()));
   }
