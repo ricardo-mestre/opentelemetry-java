@@ -12,7 +12,7 @@ import io.opentelemetry.exporter.otlp.http.metrics.OtlpHttpMetricExporter;
 import io.opentelemetry.exporter.otlp.http.metrics.OtlpHttpMetricExporterBuilder;
 import io.opentelemetry.exporter.otlp.metrics.OtlpGrpcMetricExporter;
 import io.opentelemetry.exporter.otlp.metrics.OtlpGrpcMetricExporterBuilder;
-import io.opentelemetry.exporter.prometheus.PrometheusCollector;
+import io.opentelemetry.exporter.prometheus.PrometheusExporter;
 import io.opentelemetry.sdk.autoconfigure.spi.ConfigurableMetricExporterProvider;
 import io.opentelemetry.sdk.metrics.SdkMeterProvider;
 import io.opentelemetry.sdk.metrics.export.IntervalMetricReader;
@@ -154,10 +154,14 @@ final class MetricExporterConfiguration {
   private static void configurePrometheusMetrics(
       ConfigProperties config, SdkMeterProvider meterProvider) {
     ClasspathUtil.checkClassExists(
-        "io.opentelemetry.exporter.prometheus.PrometheusCollector",
+        "io.opentelemetry.exporter.prometheus.PrometheusExporter",
         "Prometheus Metrics Server",
         "opentelemetry-exporter-prometheus");
-    PrometheusCollector.builder().setMetricProducer(meterProvider).buildAndRegister();
+    PrometheusExporter exporter = new PrometheusExporter();
+
+    configureIntervalMetricReader(config, meterProvider, exporter);
+
+    exporter.register();
     Integer port = config.getInt("otel.exporter.prometheus.port");
     if (port == null) {
       port = 9464;
