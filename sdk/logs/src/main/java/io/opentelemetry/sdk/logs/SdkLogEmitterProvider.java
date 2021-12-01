@@ -7,6 +7,7 @@ package io.opentelemetry.sdk.logs;
 
 import io.opentelemetry.sdk.common.Clock;
 import io.opentelemetry.sdk.common.CompletableResultCode;
+import io.opentelemetry.sdk.common.InstrumentationLibraryInfo;
 import io.opentelemetry.sdk.internal.ComponentRegistry;
 import io.opentelemetry.sdk.resources.Resource;
 import java.io.Closeable;
@@ -23,6 +24,7 @@ public final class SdkLogEmitterProvider implements Closeable {
 
   private final LogEmitterSharedState sharedState;
   private final ComponentRegistry<SdkLogEmitter> logEmitterComponentRegistry;
+  private final SdkLogEmitter singleLogEmitter;
 
   /**
    * Returns a new {@link SdkLogEmitterProviderBuilder} for {@link SdkLogEmitterProvider}.
@@ -39,6 +41,23 @@ public final class SdkLogEmitterProvider implements Closeable {
         new ComponentRegistry<>(
             instrumentationLibraryInfo ->
                 new SdkLogEmitter(sharedState, instrumentationLibraryInfo));
+    this.singleLogEmitter = new SdkLogEmitter(sharedState, null);
+  }
+
+  /** For testing purposes. */
+  public LogEmitter singleLogEmitter() {
+    return singleLogEmitter;
+  }
+
+  /** For testing purposes. */
+  public LogEmitter logEmitterNoLookup(String instrumentationName) {
+    return new SdkLogEmitter(
+        sharedState, InstrumentationLibraryInfo.create(instrumentationName, null));
+  }
+
+  /** For testing purposes. */
+  public LogEmitter logEmitterWithLookup(String instrumentationName) {
+    return logEmitterBuilder(instrumentationName).build();
   }
 
   /**

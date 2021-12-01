@@ -5,6 +5,7 @@
 
 package io.opentelemetry.sdk.logs;
 
+import io.opentelemetry.sdk.common.InstrumentationLibraryInfo;
 import javax.annotation.concurrent.ThreadSafe;
 
 /**
@@ -23,4 +24,6 @@ public interface LogEmitter {
    * LogProcessor}(s) via {@link LogBuilder#emit()}.
    */
   LogBuilder logBuilder();
+
+  LogBuilder logBuilder(InstrumentationLibraryInfo instrumentationLibraryInfo);
 }
