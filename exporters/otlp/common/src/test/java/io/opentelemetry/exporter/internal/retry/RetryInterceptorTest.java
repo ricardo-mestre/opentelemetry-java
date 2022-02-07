@@ -75,7 +75,7 @@ class RetryInterceptorTest {
             random);
     client =
         new OkHttpClient.Builder()
-            .connectTimeout(Duration.ofMillis(10))
+            .connectTimeout(Duration.ofMillis(100))
             .addInterceptor(retrier)
             .build();
   }
