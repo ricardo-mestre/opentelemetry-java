@@ -5,6 +5,10 @@
 
 package io.opentelemetry.api;
 
+import io.opentelemetry.api.events.EventEmitter;
+import io.opentelemetry.api.events.EventEmitterBuilder;
+import io.opentelemetry.api.events.EventEmitterProvider;
+import io.opentelemetry.api.logs.LoggerProvider;
 import io.opentelemetry.api.metrics.Meter;
 import io.opentelemetry.api.metrics.MeterBuilder;
 import io.opentelemetry.api.metrics.MeterProvider;
@@ -111,6 +115,22 @@ public interface OpenTelemetry {
    */
   default MeterBuilder meterBuilder(String instrumentationScopeName) {
     return getMeterProvider().meterBuilder(instrumentationScopeName);
+  }
+
+  default EventEmitterProvider getEventEmitterProvider() {
+    return EventEmitterProvider.noop();
+  }
+
+  default EventEmitter getEventEmitter(String instrumentationScopeName, String domain) {
+    return getEventEmitterProvider().get(instrumentationScopeName, domain);
+  }
+
+  default EventEmitterBuilder eventEmitterBuilder(String instrumentationScopeName, String domain) {
+    return getEventEmitterProvider().eventEmitterBuilder(instrumentationScopeName, domain);
+  }
+
+  default LoggerProvider getLoggerProvider() {
+    return LoggerProvider.noop();
   }
 
   /** Returns the {@link ContextPropagators} for this {@link OpenTelemetry}. */
