@@ -31,5 +31,7 @@ dependencies {
   testImplementation(project(":exporters:logging"))
   testImplementation(project(":exporters:otlp:all"))
 
+  testImplementation("com.fasterxml.jackson.dataformat:jackson-dataformat-yaml:2.10.1")
+  testImplementation("com.networknt:json-schema-validator:1.0.72")
   testImplementation("com.google.guava:guava-testlib")
 }

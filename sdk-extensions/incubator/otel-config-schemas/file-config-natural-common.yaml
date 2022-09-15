@@ -12,7 +12,7 @@ shared:
 sdk:
   resource:
     detectors:
-      - name: *
+      - name: "*"
     attributes:
       service.name: my-service
       service.instance.id: $CONTAINER_ID
