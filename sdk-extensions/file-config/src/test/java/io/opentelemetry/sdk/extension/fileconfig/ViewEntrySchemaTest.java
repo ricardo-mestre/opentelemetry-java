@@ -5,11 +5,10 @@
 
 package io.opentelemetry.sdk.extension.fileconfig;
 
-import org.junit.jupiter.api.Test;
+import static org.assertj.core.api.Assertions.assertThat;
 
 import java.io.File;
-
-import static org.assertj.core.api.Assertions.assertThat;
+import org.junit.jupiter.api.Test;
 
 class ViewEntrySchemaTest {
 
@@ -18,7 +17,7 @@ class ViewEntrySchemaTest {
           new File(System.getProperty("otel.sdk-schema-dir")),
           "https://opentelemetry.io/schemas/sdkconfig",
           new File(System.getProperty("otel.sdk-schema-dir") + "/view_entry.json"),
-              "/view_entry");
+          "/view_entry");
 
   @Test
   void allFields() {

@@ -28,5 +28,4 @@ class SdkSchemaTest {
   void simple() {
     assertThat(validator.validate("simple.yaml")).isEmpty();
   }
-
 }

@@ -14,17 +14,17 @@ import com.networknt.schema.JsonSchemaFactory;
 import com.networknt.schema.SpecVersion;
 import com.networknt.schema.ValidationMessage;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.nio.file.Files;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 import org.yaml.snakeyaml.Yaml;
 
-class YamlJsonSchemaValidator {
+public class YamlJsonSchemaValidator {
 
   private static final ObjectMapper MAPPER = new ObjectMapper(new YAMLFactory());
   private static final Yaml YAML = new Yaml();
@@ -36,10 +36,10 @@ class YamlJsonSchemaValidator {
       File schemaDirectory, String baseUri, File schemaFile, String resourceDir) {
     Map<String, String> uriMapping = new HashMap<>();
     for (File schema : schemaDirectory.listFiles()) {
-      uriMapping.put(baseUri + "/" + schema.getName().split("\\.")[0], schema.toURI().toASCIIString());
+      uriMapping.put(
+          baseUri + "/" + schema.getName().split("\\.")[0], schema.toURI().toASCIIString());
     }
 
-    System.out.println(uriMapping);
     JsonSchemaFactory jsonSchemaFactory =
         JsonSchemaFactory.builder(
                 // V202012 has a bug where items is not validated
@@ -48,7 +48,7 @@ class YamlJsonSchemaValidator {
             .addUriMappings(uriMapping)
             .build();
     try {
-      jsonSchema = jsonSchemaFactory.getSchema(Files.newInputStream(schemaFile.toPath()));
+      jsonSchema = jsonSchemaFactory.getSchema(new FileInputStream(schemaFile));
     } catch (IOException e) {
       throw new IllegalArgumentException("Unable to initialize validator", e);
     }
@@ -59,9 +59,9 @@ class YamlJsonSchemaValidator {
     InputStream inputStream;
     try {
       URI uri = YamlJsonSchemaValidator.class.getResource(resourceDir + "/" + resourceFile).toURI();
-      inputStream = Files.newInputStream(new File(uri).toPath());
+      inputStream = new FileInputStream(new File(uri));
     } catch (URISyntaxException | IOException e) {
-      throw new IllegalArgumentException("Unable to load resource file");
+      throw new IllegalArgumentException("Unable to load resource file", e);
     }
     return validate(inputStream);
   }

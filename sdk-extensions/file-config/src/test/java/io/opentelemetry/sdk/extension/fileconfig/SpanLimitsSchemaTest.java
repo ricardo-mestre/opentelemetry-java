@@ -8,7 +8,6 @@ package io.opentelemetry.sdk.extension.fileconfig;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.io.File;
-
 import org.junit.jupiter.api.Test;
 
 class SpanLimitsSchemaTest {
