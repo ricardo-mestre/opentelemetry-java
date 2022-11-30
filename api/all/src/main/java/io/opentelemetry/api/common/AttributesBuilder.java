@@ -12,6 +12,7 @@ import static io.opentelemetry.api.common.AttributeKey.doubleArrayKey;
 import static io.opentelemetry.api.common.AttributeKey.doubleKey;
 import static io.opentelemetry.api.common.AttributeKey.longArrayKey;
 import static io.opentelemetry.api.common.AttributeKey.longKey;
+import static io.opentelemetry.api.common.AttributeKey.mapKey;
 import static io.opentelemetry.api.common.AttributeKey.stringArrayKey;
 import static io.opentelemetry.api.common.AttributeKey.stringKey;
 
@@ -157,6 +158,14 @@ public interface AttributesBuilder {
       return this;
     }
     return put(booleanArrayKey(key), toList(value));
+  }
+
+  /** Put a Map attribute into this. */
+  default AttributesBuilder put(String key, Attributes value) {
+    if (value == null) {
+      return this;
+    }
+    return put(mapKey(key), value);
   }
 
   /**

@@ -31,6 +31,7 @@ import io.opentelemetry.proto.common.v1.AnyValue;
 import io.opentelemetry.proto.common.v1.ArrayValue;
 import io.opentelemetry.proto.common.v1.InstrumentationScope;
 import io.opentelemetry.proto.common.v1.KeyValue;
+import io.opentelemetry.proto.common.v1.KeyValueList;
 import io.opentelemetry.proto.trace.v1.ResourceSpans;
 import io.opentelemetry.proto.trace.v1.ScopeSpans;
 import io.opentelemetry.proto.trace.v1.Span;
@@ -134,8 +135,9 @@ class TraceRequestMarshalerTest {
                             .put("long_array", 12L, 23L)
                             .put("double_array", 12.3, 23.1)
                             .put("boolean_array", true, false)
+                            .put("map", Attributes.builder().put("string", "string").build())
                             .build())
-                    .setTotalAttributeCount(9)
+                    .setTotalAttributeCount(10)
                     .setEvents(
                         Collections.singletonList(
                             EventData.create(12347, "my_event", Attributes.empty())))
@@ -154,7 +156,7 @@ class TraceRequestMarshalerTest {
     assertThat(span.getStartTimeUnixNano()).isEqualTo(12345);
     assertThat(span.getEndTimeUnixNano()).isEqualTo(12349);
     assertThat(span.getAttributesList())
-        .containsOnly(
+        .contains(
             KeyValue.newBuilder()
                 .setKey("key")
                 .setValue(AnyValue.newBuilder().setBoolValue(true).build())
@@ -212,6 +214,21 @@ class TraceRequestMarshalerTest {
                             ArrayValue.newBuilder()
                                 .addValues(AnyValue.newBuilder().setBoolValue(true).build())
                                 .addValues(AnyValue.newBuilder().setBoolValue(false).build())
+                                .build())
+                        .build())
+                .build(),
+            KeyValue.newBuilder()
+                .setKey("map")
+                .setValue(
+                    AnyValue.newBuilder()
+                        .setKvlistValue(
+                            KeyValueList.newBuilder()
+                                .addValues(
+                                    KeyValue.newBuilder()
+                                        .setKey("string")
+                                        .setValue(
+                                            AnyValue.newBuilder().setStringValue("string").build())
+                                        .build())
                                 .build())
                         .build())
                 .build());

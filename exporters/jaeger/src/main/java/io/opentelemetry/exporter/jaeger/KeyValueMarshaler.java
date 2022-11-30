@@ -82,6 +82,11 @@ final class KeyValueMarshaler extends MarshalerWithSize {
           // Can't happen, just ignore it.
         }
         break;
+      case MAP:
+        // TODO: json serialization?
+        valueType = ValueType.STRING;
+        vStrUtf8 = MarshalerUtil.toBytes("");
+        break;
     }
 
     return new KeyValueMarshaler(keyUtf8, valueType, vStrUtf8, vBool, vInt64, vFloat64);

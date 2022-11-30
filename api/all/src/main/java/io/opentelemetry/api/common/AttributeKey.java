@@ -65,4 +65,9 @@ public interface AttributeKey<T> {
   static AttributeKey<List<Double>> doubleArrayKey(String key) {
     return InternalAttributeKeyImpl.create(key, AttributeType.DOUBLE_ARRAY);
   }
+
+  /** Returns a new AttributeKey for Map valued attributes. */
+  static AttributeKey<Attributes> mapKey(String key) {
+    return InternalAttributeKeyImpl.create(key, AttributeType.MAP);
+  }
 }

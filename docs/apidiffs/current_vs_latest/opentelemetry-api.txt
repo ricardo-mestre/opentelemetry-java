@@ -1,2 +1,10 @@
 Comparing source compatibility of  against 
-No changes.
+***  MODIFIED INTERFACE: PUBLIC ABSTRACT io.opentelemetry.api.common.AttributeKey  (not serializable)
+	===  CLASS FILE FORMAT VERSION: 52.0 <- 52.0
+	+++  NEW METHOD: PUBLIC(+) STATIC(+) io.opentelemetry.api.common.AttributeKey mapKey(java.lang.String)
+***  MODIFIED INTERFACE: PUBLIC ABSTRACT io.opentelemetry.api.common.AttributesBuilder  (not serializable)
+	===  CLASS FILE FORMAT VERSION: 52.0 <- 52.0
+	+++  NEW METHOD: PUBLIC(+) io.opentelemetry.api.common.AttributesBuilder put(java.lang.String, io.opentelemetry.api.common.Attributes)
+***  MODIFIED ENUM: PUBLIC FINAL io.opentelemetry.api.common.AttributeType  (compatible)
+	===  CLASS FILE FORMAT VERSION: 52.0 <- 52.0
+	+++  NEW FIELD: PUBLIC(+) STATIC(+) FINAL(+) io.opentelemetry.api.common.AttributeType MAP

@@ -17,6 +17,7 @@ import com.linecorp.armeria.server.grpc.protocol.AbstractUnaryGrpcService;
 import com.linecorp.armeria.testing.junit5.server.SelfSignedCertificateExtension;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 import io.opentelemetry.api.GlobalOpenTelemetry;
+import io.opentelemetry.api.common.AttributeKey;
 import io.opentelemetry.api.common.Attributes;
 import io.opentelemetry.api.logs.Logger;
 import io.opentelemetry.api.logs.Severity;
@@ -44,6 +45,7 @@ import io.opentelemetry.proto.collector.trace.v1.ExportTraceServiceRequest;
 import io.opentelemetry.proto.collector.trace.v1.ExportTraceServiceResponse;
 import io.opentelemetry.proto.common.v1.AnyValue;
 import io.opentelemetry.proto.common.v1.KeyValue;
+import io.opentelemetry.proto.common.v1.KeyValueList;
 import io.opentelemetry.proto.logs.v1.ResourceLogs;
 import io.opentelemetry.proto.logs.v1.ScopeLogs;
 import io.opentelemetry.proto.metrics.v1.AggregationTemporality;
@@ -71,7 +73,6 @@ import java.io.UncheckedIOException;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.CompletionStage;
 import org.junit.jupiter.api.AfterAll;
@@ -263,6 +264,8 @@ abstract class OtlpExporterIntegrationTest {
             .addLink(linkContext)
             .startSpan();
     span.setAttribute("key", "value");
+    span.setAttribute(
+        AttributeKey.mapKey("map"), Attributes.builder().put("nestedKey", "nestedValue").build());
     span.addEvent("event");
     span.end();
 
@@ -295,13 +298,30 @@ abstract class OtlpExporterIntegrationTest {
     assertThat(protoSpan.getSpanId().toByteArray())
         .isEqualTo(span.getSpanContext().getSpanIdBytes());
     assertThat(protoSpan.getName()).isEqualTo("my span name");
+
     assertThat(protoSpan.getAttributesList())
-        .isEqualTo(
-            Collections.singletonList(
-                KeyValue.newBuilder()
-                    .setKey("key")
-                    .setValue(AnyValue.newBuilder().setStringValue("value").build())
-                    .build()));
+        .containsExactlyInAnyOrder(
+            KeyValue.newBuilder()
+                .setKey("key")
+                .setValue(AnyValue.newBuilder().setStringValue("value").build())
+                .build(),
+            KeyValue.newBuilder()
+                .setKey("map")
+                .setValue(
+                    AnyValue.newBuilder()
+                        .setKvlistValue(
+                            KeyValueList.newBuilder()
+                                .addValues(
+                                    KeyValue.newBuilder()
+                                        .setKey("nestedKey")
+                                        .setValue(
+                                            AnyValue.newBuilder()
+                                                .setStringValue("nestedValue")
+                                                .build())
+                                        .build())
+                                .build())
+                        .build())
+                .build());
     assertThat(protoSpan.getEventsCount()).isEqualTo(1);
     assertThat(protoSpan.getEvents(0).getName()).isEqualTo("event");
     assertThat(protoSpan.getLinksCount()).isEqualTo(1);
@@ -389,7 +409,12 @@ abstract class OtlpExporterIntegrationTest {
     Meter meter = meterProvider.meterBuilder(OtlpExporterIntegrationTest.class.getName()).build();
 
     LongCounter longCounter = meter.counterBuilder("my-counter").build();
-    longCounter.add(100, Attributes.builder().put("key", "value").build());
+    longCounter.add(
+        100,
+        Attributes.builder()
+            .put("key", "value")
+            .put("map", Attributes.builder().put("nestedKey", "nestedValue").build())
+            .build());
 
     // Closing triggers flush of reader
     meterProvider.close();
@@ -427,12 +452,28 @@ abstract class OtlpExporterIntegrationTest {
     NumberDataPoint dataPoint = sum.getDataPoints(0);
     assertThat(dataPoint.getAsInt()).isEqualTo(100);
     assertThat(dataPoint.getAttributesList())
-        .isEqualTo(
-            Collections.singletonList(
-                KeyValue.newBuilder()
-                    .setKey("key")
-                    .setValue(AnyValue.newBuilder().setStringValue("value").build())
-                    .build()));
+        .containsExactlyInAnyOrder(
+            KeyValue.newBuilder()
+                .setKey("key")
+                .setValue(AnyValue.newBuilder().setStringValue("value").build())
+                .build(),
+            KeyValue.newBuilder()
+                .setKey("map")
+                .setValue(
+                    AnyValue.newBuilder()
+                        .setKvlistValue(
+                            KeyValueList.newBuilder()
+                                .addValues(
+                                    KeyValue.newBuilder()
+                                        .setKey("nestedKey")
+                                        .setValue(
+                                            AnyValue.newBuilder()
+                                                .setStringValue("nestedValue")
+                                                .build())
+                                        .build())
+                                .build())
+                        .build())
+                .build());
   }
 
   @ParameterizedTest
@@ -521,7 +562,11 @@ abstract class OtlpExporterIntegrationTest {
       logger
           .logRecordBuilder()
           .setBody("log body")
-          .setAllAttributes(Attributes.builder().put("key", "value").build())
+          .setAllAttributes(
+              Attributes.builder()
+                  .put("key", "value")
+                  .put("map", Attributes.builder().put("nestedKey", "nestedValue").build())
+                  .build())
           .setSeverity(Severity.DEBUG)
           .setSeverityText("DEBUG")
           .setEpoch(Instant.now())
@@ -555,12 +600,28 @@ abstract class OtlpExporterIntegrationTest {
     io.opentelemetry.proto.logs.v1.LogRecord protoLog = ilLogs.getLogRecords(0);
     assertThat(protoLog.getBody().getStringValue()).isEqualTo("log body");
     assertThat(protoLog.getAttributesList())
-        .isEqualTo(
-            Collections.singletonList(
-                KeyValue.newBuilder()
-                    .setKey("key")
-                    .setValue(AnyValue.newBuilder().setStringValue("value").build())
-                    .build()));
+        .containsExactlyInAnyOrder(
+            KeyValue.newBuilder()
+                .setKey("key")
+                .setValue(AnyValue.newBuilder().setStringValue("value").build())
+                .build(),
+            KeyValue.newBuilder()
+                .setKey("map")
+                .setValue(
+                    AnyValue.newBuilder()
+                        .setKvlistValue(
+                            KeyValueList.newBuilder()
+                                .addValues(
+                                    KeyValue.newBuilder()
+                                        .setKey("nestedKey")
+                                        .setValue(
+                                            AnyValue.newBuilder()
+                                                .setStringValue("nestedValue")
+                                                .build())
+                                        .build())
+                                .build())
+                        .build())
+                .build());
     assertThat(protoLog.getSeverityNumber().getNumber())
         .isEqualTo(Severity.DEBUG.getSeverityNumber());
     assertThat(protoLog.getSeverityText()).isEqualTo("DEBUG");

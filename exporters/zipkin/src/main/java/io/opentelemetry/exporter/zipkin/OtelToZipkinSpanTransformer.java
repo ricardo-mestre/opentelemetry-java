@@ -192,6 +192,9 @@ final class OtelToZipkinSpanTransformer {
       case LONG_ARRAY:
       case DOUBLE_ARRAY:
         return commaSeparated((List<?>) attributeValue);
+      case MAP:
+        // TODO: json serialization?
+        return "";
     }
     throw new IllegalStateException("Unknown attribute type: " + type);
   }

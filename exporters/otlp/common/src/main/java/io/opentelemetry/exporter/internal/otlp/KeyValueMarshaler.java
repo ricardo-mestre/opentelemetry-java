@@ -16,6 +16,7 @@ import io.opentelemetry.exporter.internal.marshal.Serializer;
 import io.opentelemetry.proto.common.v1.internal.AnyValue;
 import io.opentelemetry.proto.common.v1.internal.ArrayValue;
 import io.opentelemetry.proto.common.v1.internal.KeyValue;
+import io.opentelemetry.proto.common.v1.internal.KeyValueList;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
@@ -89,6 +90,11 @@ public final class KeyValueMarshaler extends MarshalerWithSize {
         return new KeyValueMarshaler(
             keyUtf8,
             new ArrayAnyValueMarshaler(ArrayValueMarshaler.createDouble((List<Double>) value)));
+      case MAP:
+        return new KeyValueMarshaler(
+            keyUtf8,
+            new KeyValueListAnyValueMarshaler(
+                new KeyValueListMarshaler(KeyValueMarshaler.createRepeated((Attributes) value))));
     }
     // Error prone ensures the switch statement is complete, otherwise only can happen with
     // unaligned versions which are not supported.
@@ -247,6 +253,43 @@ public final class KeyValueMarshaler extends MarshalerWithSize {
 
     private static int calculateSize(Marshaler[] values) {
       return MarshalerUtil.sizeRepeatedMessage(ArrayValue.VALUES, values);
+    }
+  }
+
+  private static class KeyValueListAnyValueMarshaler extends MarshalerWithSize {
+    private final Marshaler value;
+
+    private KeyValueListAnyValueMarshaler(KeyValueListMarshaler value) {
+      super(calculateSize(value));
+      this.value = value;
+    }
+
+    @Override
+    public void writeTo(Serializer output) throws IOException {
+      output.serializeMessage(AnyValue.KVLIST_VALUE, value);
+    }
+
+    private static int calculateSize(Marshaler value) {
+      return MarshalerUtil.sizeMessage(AnyValue.KVLIST_VALUE, value);
+    }
+  }
+
+  private static class KeyValueListMarshaler extends MarshalerWithSize {
+
+    private final Marshaler[] values;
+
+    private KeyValueListMarshaler(KeyValueMarshaler[] values) {
+      super(calculateSize(values));
+      this.values = values;
+    }
+
+    @Override
+    public void writeTo(Serializer output) throws IOException {
+      output.serializeRepeatedMessage(KeyValueList.VALUES, values);
+    }
+
+    private static int calculateSize(Marshaler[] values) {
+      return MarshalerUtil.sizeRepeatedMessage(KeyValueList.VALUES, values);
     }
   }
 }
