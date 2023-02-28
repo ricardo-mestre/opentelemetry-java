@@ -1,0 +1,57 @@
+{
+    "$schema": "https://json-schema.org/draft-06/schema",
+    "$ref": "#/definitions/Otlp",
+    "definitions": {
+        "Otlp": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+                "protocol": {
+                    "type": "string",
+                    "pattern": "^(http|grpc)\\/(protobuf|json)"
+                },
+                "endpoint": {
+                    "type": "string",
+                    "format": "uri",
+                    "qt-uri-protocols": [
+                        "http"
+                    ]
+                },
+                "certificate": {
+                    "type": "string"
+                },
+                "client_key": {
+                    "type": "string"
+                },
+                "client_certificate": {
+                    "type": "string"
+                },
+                "headers": {
+                    "$ref": "#/definitions/Headers"
+                },
+                "compression": {
+                    "type": "string"
+                },
+                "timeout": {
+                    "type": "integer"
+                },
+                "temporality_preference": {
+                    "type": "string"
+                },
+                "default_histogram_aggregation": {
+                    "type": "string"
+                }
+            },
+            "required": [
+                "endpoint",
+                "protocol"
+            ],
+            "title": "Otlp"
+        },
+        "Headers": {
+            "type": "object",
+            "additionalProperties": true,
+            "title": "Headers"
+        }
+    }
+}
