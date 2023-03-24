@@ -5,6 +5,7 @@
 
 package io.opentelemetry.exporter.internal.http;
 
+import com.google.protobuf.InvalidProtocolBufferException;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.grpc.GrpcService;
@@ -58,7 +59,21 @@ public class OltpExporterBenchmark {
                         }
                       })
                   .build())
-          .service("/v1/traces", (ctx, req) -> HttpResponse.of(200))
+          .service(
+              "/v1/traces",
+              (ctx, req) ->
+                  HttpResponse.from(
+                      req.aggregate()
+                          .thenApply(
+                              aggregatedHttpRequest -> {
+                                try {
+                                  ExportTraceServiceRequest.parseFrom(
+                                      aggregatedHttpRequest.content().array());
+                                } catch (InvalidProtocolBufferException e) {
+                                  throw new RuntimeException(e);
+                                }
+                                return HttpResponse.of(200);
+                              })))
           .http(0)
           .build();
 
@@ -98,23 +113,27 @@ public class OltpExporterBenchmark {
                 OtlpGrpcSpanExporterBuilder.GRPC_ENDPOINT_PATH)
             .build();
 
-    okHttpHttpExporter = new HttpExporter<>("otlp", "span", new OkHttpSender(
-        "http://localhost:" + server.activeLocalPort() + "/v1/traces",
-        false,
-        Collections::emptyMap,
-        null,
-        null,
-        null
-    ), MeterProvider::noop);
+    okHttpHttpExporter =
+        new HttpExporter<>(
+            "otlp",
+            "span",
+            new OkHttpSender(
+                "http://localhost:" + server.activeLocalPort() + "/v1/traces",
+                false,
+                Collections::emptyMap,
+                null,
+                null,
+                null),
+            MeterProvider::noop);
 
-    HttpSender jdkHttpSender = HttpSender.create(
-        "http://localhost:" + server.activeLocalPort() + "/v1/traces",
-        false,
-        Collections::emptyMap,
-        null,
-        null,
-        null
-    );
+    HttpSender jdkHttpSender =
+        HttpSender.create(
+            "http://localhost:" + server.activeLocalPort() + "/v1/traces",
+            false,
+            Collections::emptyMap,
+            null,
+            null,
+            null);
     if (!jdkHttpSender.getClass().getSimpleName().equals("JdkHttpSender")) {
       throw new IllegalStateException("Must run with java 11+: -PtestJavaVersion=11");
     }
@@ -158,7 +177,9 @@ public class OltpExporterBenchmark {
   @Benchmark
   public CompletableResultCode okHttpHttpExporter(RequestMarshalState state) {
     CompletableResultCode result =
-        okHttpHttpExporter.export(state.traceRequestMarshaler, state.numSpans).join(10, TimeUnit.SECONDS);
+        okHttpHttpExporter
+            .export(state.traceRequestMarshaler, state.numSpans)
+            .join(10, TimeUnit.SECONDS);
     if (!result.isSuccess()) {
       throw new AssertionError();
     }
@@ -168,7 +189,9 @@ public class OltpExporterBenchmark {
   @Benchmark
   public CompletableResultCode jdkHttpExporter(RequestMarshalState state) {
     CompletableResultCode result =
-        okHttpHttpExporter.export(state.traceRequestMarshaler, state.numSpans).join(10, TimeUnit.SECONDS);
+        okHttpHttpExporter
+            .export(state.traceRequestMarshaler, state.numSpans)
+            .join(10, TimeUnit.SECONDS);
     if (!result.isSuccess()) {
       throw new AssertionError();
     }
