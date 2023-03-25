@@ -6,9 +6,10 @@
 package io.opentelemetry.exporter.internal.http;
 
 import io.opentelemetry.sdk.common.CompletableResultCode;
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.io.PipedInputStream;
+import java.io.PipedOutputStream;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.http.HttpClient;
@@ -21,6 +22,8 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 import java.util.zip.GZIPOutputStream;
@@ -32,6 +35,7 @@ import javax.net.ssl.X509TrustManager;
 
 public class JdkHttpSender implements HttpSender {
 
+  private final ExecutorService executorService = Executors.newFixedThreadPool(5);
   private final HttpClient client;
   private final URI uri;
   private final boolean compressionEnabled;
@@ -90,24 +94,6 @@ public class JdkHttpSender implements HttpSender {
       Consumer<HttpResponse> onResponse) {
     HttpRequest.Builder requestBuilder = HttpRequest.newBuilder().uri(uri);
     headerSupplier.get().forEach(requestBuilder::setHeader);
-
-    // todo: timeout
-    // TODO: avoid byte baos?
-    ByteArrayOutputStream baos = new ByteArrayOutputStream();
-
-    if (compressionEnabled) {
-      requestBuilder.header("Content-Encoding", "gzip");
-      try (GZIPOutputStream gzos = new GZIPOutputStream(baos)) {
-        marshaler.accept(gzos);
-      } catch (IOException e) {
-        throw new RuntimeException(e);
-      }
-
-    } else {
-      marshaler.accept(baos);
-    }
-
-    requestBuilder.POST(HttpRequest.BodyPublishers.ofByteArray(baos.toByteArray()));
     requestBuilder.header("Content-Type", "application/x-protobuf");
 
     HttpResponse response = null;
@@ -118,7 +104,7 @@ public class JdkHttpSender implements HttpSender {
       // Compute timeout
       // TODO: sleep for backoff if needed
       try {
-        response = send(requestBuilder);
+        response = send(requestBuilder, marshaler);
       } catch (Exception e) {
         exception = e;
       }
@@ -141,10 +127,34 @@ public class JdkHttpSender implements HttpSender {
     }
   }
 
-  private HttpResponse send(HttpRequest.Builder requestBuilder) throws Exception {
-    java.net.http.HttpResponse<byte[]> send =
-        client.send(requestBuilder.build(), java.net.http.HttpResponse.BodyHandlers.ofByteArray());
-    return toHttpResponse(send);
+  private HttpResponse send(HttpRequest.Builder requestBuilder, Consumer<OutputStream> marshaler)
+      throws Exception {
+    try (PipedInputStream is = new PipedInputStream()) {
+      if (compressionEnabled) {
+        requestBuilder.header("Content-Encoding", "gzip");
+      }
+
+      executorService.submit(
+          () -> {
+            try (PipedOutputStream os = new PipedOutputStream(is)) {
+              if (compressionEnabled) {
+                try (GZIPOutputStream gzos = new GZIPOutputStream(os)) {
+                  marshaler.accept(gzos);
+                }
+              } else {
+                marshaler.accept(os);
+              }
+            } catch (IOException e) {
+              throw new RuntimeException(e);
+            }
+          });
+
+      requestBuilder.POST(HttpRequest.BodyPublishers.ofInputStream(() -> is));
+      java.net.http.HttpResponse<byte[]> send =
+          client.send(
+              requestBuilder.build(), java.net.http.HttpResponse.BodyHandlers.ofByteArray());
+      return toHttpResponse(send);
+    }
   }
 
   private static HttpResponse toHttpResponse(java.net.http.HttpResponse<byte[]> response) {
@@ -168,6 +178,7 @@ public class JdkHttpSender implements HttpSender {
 
   @Override
   public CompletableResultCode shutdown() {
+    executorService.shutdown();
     // TODO:
     return CompletableResultCode.ofSuccess();
   }
