@@ -32,7 +32,6 @@ import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
-import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 import java.util.zip.GZIPOutputStream;
@@ -98,9 +97,7 @@ public class JdkHttpSender implements HttpSender {
 
   @Override
   public CompletableFuture<Response> send(Consumer<OutputStream> marshaler, int contentLength) {
-    return CompletableFuture.supplyAsync(() -> new ExportRequest(marshaler).send(), executorService)
-        .thenCompose(x -> x)
-        .thenApply(JdkHttpSender::toHttpResponse);
+    return new ExportRequest(marshaler).send().thenApply(JdkHttpSender::toHttpResponse);
   }
 
   private HttpRequest.Builder builder() {
@@ -123,7 +120,8 @@ public class JdkHttpSender implements HttpSender {
 
     private CompletableFuture<HttpResponse<byte[]>> send() {
       HttpRequest.Builder requestBuilder = builder();
-      PipedInputStream is = new PipedInputStream(10);
+      // TODO: make sure to test with small pipe size
+      PipedInputStream is = new PipedInputStream();
 
       if (compressionEnabled) {
         requestBuilder.header("Content-Encoding", "gzip");
@@ -148,39 +146,38 @@ public class JdkHttpSender implements HttpSender {
               },
               marshalerService);
 
+      // TODO: timeout
       return client
           .sendAsync(requestBuilder.build(), BodyHandlers.ofByteArray())
-          .handleAsync(
-              (BiFunction<HttpResponse<byte[]>, Throwable, CompletableFuture<HttpResponse<byte[]>>>)
-                  (httpResponse, throwable) -> {
-                    try {
-                      is.close();
-                    } catch (IOException e) {
-                      return CompletableFuture.failedFuture(e);
-                    }
-                    int currentAttempt = attempt.incrementAndGet();
-                    if (currentAttempt >= retryPolicyCopy.maxAttempts
-                        || !retryableStatusCodes.contains(httpResponse.statusCode())) {
-                      return CompletableFuture.completedFuture(httpResponse);
-                    }
+          .thenCombineAsync(
+              marshalFuture,
+              (httpResponse, throwable) -> {
+                try {
+                  is.close();
+                } catch (IOException e) {
+                  throw new RuntimeException(e);
+                }
+                int currentAttempt = attempt.incrementAndGet();
+                if (currentAttempt >= retryPolicyCopy.maxAttempts
+                    || !retryableStatusCodes.contains(httpResponse.statusCode())) {
+                  return httpResponse;
+                }
 
-                    // Compute and sleep for backoff
-                    long upperBoundNanos =
-                        Math.min(nextBackoffNanos.get(), retryPolicyCopy.maxBackoff.toNanos());
-                    long backoffNanos = ThreadLocalRandom.current().nextLong(upperBoundNanos);
-                    nextBackoffNanos.set(
-                        (long) (nextBackoffNanos.get() * retryPolicyCopy.backoffMultiplier));
-                    try {
-                      TimeUnit.NANOSECONDS.sleep(backoffNanos);
-                    } catch (InterruptedException e) {
-                      return CompletableFuture.failedFuture(e);
-                    }
+                // Compute and sleep for backoff
+                long upperBoundNanos =
+                    Math.min(nextBackoffNanos.get(), retryPolicyCopy.maxBackoff.toNanos());
+                long backoffNanos = ThreadLocalRandom.current().nextLong(upperBoundNanos);
+                nextBackoffNanos.set(
+                    (long) (nextBackoffNanos.get() * retryPolicyCopy.backoffMultiplier));
+                try {
+                  TimeUnit.NANOSECONDS.sleep(backoffNanos);
+                } catch (InterruptedException e) {
+                  throw new RuntimeException(e);
+                }
 
-                    return send();
-                  },
-              executorService)
-          .thenCombine(marshalFuture, (httpResponseFuture, unused) -> httpResponseFuture)
-          .thenCompose(x -> x);
+                return send().join();
+              },
+              executorService);
     }
   }
 
