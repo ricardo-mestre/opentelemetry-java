@@ -12,6 +12,7 @@ import io.opentelemetry.sdk.common.CompletableResultCode;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 import javax.annotation.Nullable;
@@ -24,7 +25,6 @@ import okhttp3.MediaType;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.RequestBody;
-import okhttp3.Response;
 import okhttp3.ResponseBody;
 import okio.BufferedSink;
 import okio.GzipSink;
@@ -65,11 +65,7 @@ public class OkHttpSender implements HttpSender {
   }
 
   @Override
-  public void send(
-      Consumer<OutputStream> marshaler,
-      int contentLength,
-      Consumer<Throwable> onFailure,
-      Consumer<HttpResponse> onResponse) {
+  public CompletableFuture<Response> send(Consumer<OutputStream> marshaler, int contentLength) {
     Request.Builder requestBuilder = new Request.Builder().url(url);
     headerSupplier.get().forEach(requestBuilder::addHeader);
     RequestBody body = new ProtoRequestBody(marshaler, contentLength);
@@ -80,20 +76,22 @@ public class OkHttpSender implements HttpSender {
       requestBuilder.post(body);
     }
 
+    CompletableFuture<Response> result = new CompletableFuture<>();
+
     client
         .newCall(requestBuilder.build())
         .enqueue(
             new Callback() {
               @Override
               public void onFailure(Call call, IOException e) {
-                onFailure.accept(e);
+                result.completeExceptionally(e);
               }
 
               @Override
-              public void onResponse(Call call, Response response) {
+              public void onResponse(Call call, okhttp3.Response response) {
                 try (ResponseBody body = response.body()) {
-                  onResponse.accept(
-                      new HttpResponse() {
+                  result.complete(
+                      new Response() {
                         @Override
                         public int statusCode() {
                           return response.code();
@@ -112,6 +110,8 @@ public class OkHttpSender implements HttpSender {
                 }
               }
             });
+
+    return result;
   }
 
   @Override
@@ -122,7 +122,7 @@ public class OkHttpSender implements HttpSender {
     return CompletableResultCode.ofSuccess();
   }
 
-  static boolean isRetryable(Response response) {
+  static boolean isRetryable(okhttp3.Response response) {
     return RetryUtil.retryableHttpResponseCodes().contains(response.code());
   }
 

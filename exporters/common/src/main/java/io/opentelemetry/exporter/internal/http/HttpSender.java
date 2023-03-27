@@ -9,6 +9,7 @@ import io.opentelemetry.sdk.common.CompletableResultCode;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 import javax.annotation.Nullable;
@@ -21,22 +22,18 @@ public interface HttpSender {
       String endpoint,
       boolean compressionEnabled,
       Supplier<Map<String, String>> headerSupplier,
-      @Nullable RetryPolicyCopy retryPolicy,
+      @Nullable RetryPolicyCopy retryPolicyCopy,
       @Nullable SSLSocketFactory socketFactory,
       @Nullable X509TrustManager trustManager) {
     return new OkHttpSender(
-        endpoint, compressionEnabled, headerSupplier, retryPolicy, socketFactory, trustManager);
+        endpoint, compressionEnabled, headerSupplier, retryPolicyCopy, socketFactory, trustManager);
   }
 
-  void send(
-      Consumer<OutputStream> marshaler,
-      int contentLength,
-      Consumer<Throwable> onFailure,
-      Consumer<HttpResponse> onResponse);
+  CompletableFuture<Response> send(Consumer<OutputStream> marshaler, int contentLength);
 
   CompletableResultCode shutdown();
 
-  interface HttpResponse {
+  interface Response {
 
     int statusCode();
 

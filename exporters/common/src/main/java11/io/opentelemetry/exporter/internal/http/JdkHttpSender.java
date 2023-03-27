@@ -5,6 +5,8 @@
 
 package io.opentelemetry.exporter.internal.http;
 
+import static java.net.http.HttpResponse.BodyHandlers;
+
 import io.opentelemetry.sdk.common.CompletableResultCode;
 import java.io.IOException;
 import java.io.OutputStream;
@@ -14,6 +16,7 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
 import java.security.KeyManagementException;
 import java.security.NoSuchAlgorithmException;
 import java.time.Duration;
@@ -22,8 +25,14 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.ThreadLocalRandom;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
+import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 import java.util.zip.GZIPOutputStream;
@@ -35,7 +44,11 @@ import javax.net.ssl.X509TrustManager;
 
 public class JdkHttpSender implements HttpSender {
 
-  private final ExecutorService executorService = Executors.newFixedThreadPool(5);
+  private static final Set<Integer> retryableStatusCodes =
+      Collections.unmodifiableSet(new HashSet<>(Arrays.asList(429, 502, 503, 504)));
+
+  private final ExecutorService marshalerService = Executors.newFixedThreadPool(2);
+  private final ExecutorService executorService = Executors.newFixedThreadPool(2);
   private final HttpClient client;
   private final URI uri;
   private final boolean compressionEnabled;
@@ -49,7 +62,7 @@ public class JdkHttpSender implements HttpSender {
       @Nullable RetryPolicyCopy retryPolicyCopy,
       @Nullable SSLSocketFactory socketFactory,
       @Nullable X509TrustManager trustManager) {
-    HttpClient.Builder builder = HttpClient.newBuilder();
+    HttpClient.Builder builder = HttpClient.newBuilder().executor(executorService);
     maybeConfigSSL(builder, socketFactory, trustManager);
     this.client = builder.build();
     try {
@@ -83,82 +96,96 @@ public class JdkHttpSender implements HttpSender {
     builder.sslContext(context);
   }
 
-  private static final Set<Integer> retryableStatusCodes =
-      Collections.unmodifiableSet(new HashSet<>(Arrays.asList(429, 502, 503, 504)));
-
   @Override
-  public void send(
-      Consumer<OutputStream> marshaler,
-      int contentLength,
-      Consumer<Throwable> onFailure,
-      Consumer<HttpResponse> onResponse) {
+  public CompletableFuture<Response> send(Consumer<OutputStream> marshaler, int contentLength) {
+    return CompletableFuture.supplyAsync(() -> new ExportRequest(marshaler).send(), executorService)
+        .thenCompose(x -> x)
+        .thenApply(JdkHttpSender::toHttpResponse);
+  }
+
+  private HttpRequest.Builder builder() {
     HttpRequest.Builder requestBuilder = HttpRequest.newBuilder().uri(uri);
     headerSupplier.get().forEach(requestBuilder::setHeader);
     requestBuilder.header("Content-Type", "application/x-protobuf");
-
-    HttpResponse response = null;
-    Exception exception = null;
-    int attempt = 0;
-    long nextBackoffNanos = retryPolicyCopy.initialBackoff.toNanos();
-    while (attempt < retryPolicyCopy.maxAttempts) {
-      // Compute timeout
-      // TODO: sleep for backoff if needed
-      try {
-        response = send(requestBuilder, marshaler);
-      } catch (Exception e) {
-        exception = e;
-      }
-      if (response != null && !retryableStatusCodes.contains(response.statusCode())) {
-        onResponse.accept(response);
-        return;
-      }
-      // TODO: determine which exceptions are retryable
-      if (exception != null) {
-        onFailure.accept(exception);
-        return;
-      }
-      attempt++;
-    }
-
-    if (response != null) {
-      onResponse.accept(response);
-    } else {
-      onFailure.accept(exception);
-    }
+    return requestBuilder;
   }
 
-  private HttpResponse send(HttpRequest.Builder requestBuilder, Consumer<OutputStream> marshaler)
-      throws Exception {
-    try (PipedInputStream is = new PipedInputStream()) {
+  private class ExportRequest {
+
+    private final Consumer<OutputStream> marshaler;
+    private final AtomicInteger attempt = new AtomicInteger();
+    private final AtomicLong nextBackoffNanos =
+        new AtomicLong(retryPolicyCopy.initialBackoff.toNanos());
+
+    private ExportRequest(Consumer<OutputStream> marshaler) {
+      this.marshaler = marshaler;
+    }
+
+    private CompletableFuture<HttpResponse<byte[]>> send() {
+      HttpRequest.Builder requestBuilder = builder();
+      PipedInputStream is = new PipedInputStream(10);
+
       if (compressionEnabled) {
         requestBuilder.header("Content-Encoding", "gzip");
       }
 
-      executorService.submit(
-          () -> {
-            try (PipedOutputStream os = new PipedOutputStream(is)) {
-              if (compressionEnabled) {
-                try (GZIPOutputStream gzos = new GZIPOutputStream(os)) {
-                  marshaler.accept(gzos);
-                }
-              } else {
-                marshaler.accept(os);
-              }
-            } catch (IOException e) {
-              throw new RuntimeException(e);
-            }
-          });
-
       requestBuilder.POST(HttpRequest.BodyPublishers.ofInputStream(() -> is));
-      java.net.http.HttpResponse<byte[]> send =
-          client.send(
-              requestBuilder.build(), java.net.http.HttpResponse.BodyHandlers.ofByteArray());
-      return toHttpResponse(send);
+
+      CompletableFuture<Void> marshalFuture =
+          CompletableFuture.runAsync(
+              () -> {
+                try (PipedOutputStream os = new PipedOutputStream(is)) {
+                  if (compressionEnabled) {
+                    try (GZIPOutputStream gzos = new GZIPOutputStream(os)) {
+                      marshaler.accept(gzos);
+                    }
+                  } else {
+                    marshaler.accept(os);
+                  }
+                } catch (IOException e) {
+                  throw new RuntimeException(e);
+                }
+              },
+              marshalerService);
+
+      return client
+          .sendAsync(requestBuilder.build(), BodyHandlers.ofByteArray())
+          .handleAsync(
+              (BiFunction<HttpResponse<byte[]>, Throwable, CompletableFuture<HttpResponse<byte[]>>>)
+                  (httpResponse, throwable) -> {
+                    try {
+                      is.close();
+                    } catch (IOException e) {
+                      return CompletableFuture.failedFuture(e);
+                    }
+                    int currentAttempt = attempt.incrementAndGet();
+                    if (currentAttempt >= retryPolicyCopy.maxAttempts
+                        || !retryableStatusCodes.contains(httpResponse.statusCode())) {
+                      return CompletableFuture.completedFuture(httpResponse);
+                    }
+
+                    // Compute and sleep for backoff
+                    long upperBoundNanos =
+                        Math.min(nextBackoffNanos.get(), retryPolicyCopy.maxBackoff.toNanos());
+                    long backoffNanos = ThreadLocalRandom.current().nextLong(upperBoundNanos);
+                    nextBackoffNanos.set(
+                        (long) (nextBackoffNanos.get() * retryPolicyCopy.backoffMultiplier));
+                    try {
+                      TimeUnit.NANOSECONDS.sleep(backoffNanos);
+                    } catch (InterruptedException e) {
+                      return CompletableFuture.failedFuture(e);
+                    }
+
+                    return send();
+                  },
+              executorService)
+          .thenCombine(marshalFuture, (httpResponseFuture, unused) -> httpResponseFuture)
+          .thenCompose(x -> x);
     }
   }
 
-  private static HttpResponse toHttpResponse(java.net.http.HttpResponse<byte[]> response) {
-    return new HttpResponse() {
+  private static Response toHttpResponse(HttpResponse<byte[]> response) {
+    return new Response() {
       @Override
       public int statusCode() {
         return response.statusCode();
@@ -179,6 +206,7 @@ public class JdkHttpSender implements HttpSender {
   @Override
   public CompletableResultCode shutdown() {
     executorService.shutdown();
+    marshalerService.shutdown();
     // TODO:
     return CompletableResultCode.ofSuccess();
   }
