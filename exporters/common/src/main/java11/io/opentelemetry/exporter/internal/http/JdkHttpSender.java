@@ -149,14 +149,19 @@ public class JdkHttpSender implements HttpSender {
       // TODO: timeout
       return client
           .sendAsync(requestBuilder.build(), BodyHandlers.ofByteArray())
-          .thenCombineAsync(
-              marshalFuture,
+          .thenCombine(marshalFuture, (httpResponse, unused) -> httpResponse)
+          .handleAsync(
               (httpResponse, throwable) -> {
                 try {
                   is.close();
                 } catch (IOException e) {
                   throw new RuntimeException(e);
                 }
+                // TODO: is throwable retryable?
+                if (throwable != null) {
+                  throw new RuntimeException(throwable);
+                }
+
                 int currentAttempt = attempt.incrementAndGet();
                 if (currentAttempt >= retryPolicyCopy.maxAttempts
                     || !retryableStatusCodes.contains(httpResponse.statusCode())) {
