@@ -11,8 +11,8 @@ import io.opentelemetry.exporter.internal.retry.RetryUtil;
 import io.opentelemetry.sdk.common.CompletableResultCode;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.time.Duration;
 import java.util.Map;
-import java.util.concurrent.CompletableFuture;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 import javax.annotation.Nullable;
@@ -37,14 +37,18 @@ public class OkHttpSender implements HttpSender {
   private final boolean compressionEnabled;
   private final Supplier<Map<String, String>> headerSupplier;
 
-  public OkHttpSender(
+  OkHttpSender(
       String endpoint,
       boolean compressionEnabled,
+      long timeoutNanos,
       Supplier<Map<String, String>> headerSupplier,
       @Nullable RetryPolicyCopy retryPolicyCopy,
       @Nullable SSLSocketFactory socketFactory,
       @Nullable X509TrustManager trustManager) {
-    OkHttpClient.Builder builder = new OkHttpClient.Builder();
+    OkHttpClient.Builder builder =
+        new OkHttpClient.Builder()
+            .dispatcher(OkHttpUtil.newDispatcher())
+            .callTimeout(Duration.ofNanos(timeoutNanos));
     if (retryPolicyCopy != null) {
       RetryPolicy retryPolicy =
           RetryPolicy.builder()
@@ -65,7 +69,11 @@ public class OkHttpSender implements HttpSender {
   }
 
   @Override
-  public CompletableFuture<Response> send(Consumer<OutputStream> marshaler, int contentLength) {
+  public void send(
+      Consumer<OutputStream> marshaler,
+      int contentLength,
+      Consumer<Response> onResponse,
+      Consumer<Throwable> onError) {
     Request.Builder requestBuilder = new Request.Builder().url(url);
     headerSupplier.get().forEach(requestBuilder::addHeader);
     RequestBody body = new ProtoRequestBody(marshaler, contentLength);
@@ -76,21 +84,19 @@ public class OkHttpSender implements HttpSender {
       requestBuilder.post(body);
     }
 
-    CompletableFuture<Response> result = new CompletableFuture<>();
-
     client
         .newCall(requestBuilder.build())
         .enqueue(
             new Callback() {
               @Override
               public void onFailure(Call call, IOException e) {
-                result.completeExceptionally(e);
+                onError.accept(e);
               }
 
               @Override
               public void onResponse(Call call, okhttp3.Response response) {
                 try (ResponseBody body = response.body()) {
-                  result.complete(
+                  onResponse.accept(
                       new Response() {
                         @Override
                         public int statusCode() {
@@ -110,8 +116,6 @@ public class OkHttpSender implements HttpSender {
                 }
               }
             });
-
-    return result;
   }
 
   @Override

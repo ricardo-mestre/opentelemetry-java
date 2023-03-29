@@ -54,6 +54,7 @@ public final class MarshalerTraceServiceGrpc {
               .setResponseMarshaller(RESPONSE_MARSHALER)
               .build();
 
+  /** TODO: make package private. */
   public static TraceServiceFutureStub newFutureStub(
       io.grpc.Channel channel, @Nullable String authorityOverride) {
     return TraceServiceFutureStub.newStub(
@@ -61,6 +62,7 @@ public final class MarshalerTraceServiceGrpc {
         channel);
   }
 
+  /** TODO: make package private. */
   public static final class TraceServiceFutureStub
       extends MarshalerServiceStub<
           TraceRequestMarshaler, ExportTraceServiceResponse, TraceServiceFutureStub> {

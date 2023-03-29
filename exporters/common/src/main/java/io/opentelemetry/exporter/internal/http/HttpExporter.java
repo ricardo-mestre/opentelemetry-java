@@ -37,16 +37,19 @@ public final class HttpExporter<T extends Marshaler> {
   private final String type;
   private final HttpSender httpSender;
   private final ExporterMetrics exporterMetrics;
+  private final boolean exportAsJson;
 
   public HttpExporter(
       String exporterName,
       String type,
       HttpSender httpSender,
-      Supplier<MeterProvider> meterProviderSupplier) {
+      Supplier<MeterProvider> meterProviderSupplier,
+      boolean exportAsJson) {
     this.type = type;
     this.httpSender = httpSender;
     this.exporterMetrics =
         ExporterMetrics.createHttpProtobuf(exporterName, type, meterProviderSupplier);
+    this.exportAsJson = exportAsJson;
   }
 
   public CompletableResultCode export(T exportRequest, int numItems) {
@@ -61,56 +64,59 @@ public final class HttpExporter<T extends Marshaler> {
     Consumer<OutputStream> marshaler =
         os -> {
           try {
-            exportRequest.writeBinaryTo(os);
+            if (exportAsJson) {
+              exportRequest.writeJsonTo(os);
+            } else {
+              exportRequest.writeBinaryTo(os);
+            }
           } catch (IOException e) {
-            throw new RuntimeException(e);
+            throw new IllegalStateException(e);
           }
         };
 
-    httpSender
-        .send(marshaler, exportRequest.getBinarySerializedSize())
-        .whenComplete(
-            (httpResponse, e) -> {
-              if (e != null) {
-                exporterMetrics.addFailed(numItems);
-                logger.log(
-                    Level.SEVERE,
-                    "Failed to export "
-                        + type
-                        + "s. The request could not be executed. Full error message: "
-                        + e.getMessage());
-                result.fail();
-                return;
-              }
-              int statusCode = httpResponse.statusCode();
+    httpSender.send(
+        marshaler,
+        exportRequest.getBinarySerializedSize(),
+        httpResponse -> {
+          int statusCode = httpResponse.statusCode();
 
-              if (statusCode >= 200 && statusCode < 300) {
-                exporterMetrics.addSuccess(numItems);
-                result.succeed();
-                return;
-              }
+          if (statusCode >= 200 && statusCode < 300) {
+            exporterMetrics.addSuccess(numItems);
+            result.succeed();
+            return;
+          }
 
-              exporterMetrics.addFailed(numItems);
+          exporterMetrics.addFailed(numItems);
 
-              byte[] body;
-              try {
-                body = httpResponse.responseBody();
-              } catch (IOException ex) {
-                throw new RuntimeException(ex);
-              }
+          byte[] body;
+          try {
+            body = httpResponse.responseBody();
+          } catch (IOException ex) {
+            throw new IllegalStateException(ex);
+          }
 
-              String status = extractErrorStatus(httpResponse.statusMessage(), body);
+          String status = extractErrorStatus(httpResponse.statusMessage(), body);
 
-              logger.log(
-                  Level.WARNING,
-                  "Failed to export "
-                      + type
-                      + "s. Server responded with HTTP status code "
-                      + statusCode
-                      + ". Error message: "
-                      + status);
-              result.fail();
-            });
+          logger.log(
+              Level.WARNING,
+              "Failed to export "
+                  + type
+                  + "s. Server responded with HTTP status code "
+                  + statusCode
+                  + ". Error message: "
+                  + status);
+          result.fail();
+        },
+        e -> {
+          exporterMetrics.addFailed(numItems);
+          logger.log(
+              Level.SEVERE,
+              "Failed to export "
+                  + type
+                  + "s. The request could not be executed. Full error message: "
+                  + e.getMessage());
+          result.fail();
+        });
 
     return result;
   }

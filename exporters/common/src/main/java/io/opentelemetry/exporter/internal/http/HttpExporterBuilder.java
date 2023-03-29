@@ -157,11 +157,13 @@ public final class HttpExporterBuilder<T extends Marshaler> {
         HttpSender.create(
             endpoint,
             compressionEnabled,
+            timeoutNanos,
             headerSupplier,
             retryPolicyCopy,
             tlsConfigHelper.getSslSocketFactory(),
-            tlsConfigHelper.getTrustManager());
+            tlsConfigHelper.getTrustManager(),
+            tlsConfigHelper.getKeyManager());
 
-    return new HttpExporter<>(exporterName, type, sender, meterProviderSupplier);
+    return new HttpExporter<>(exporterName, type, sender, meterProviderSupplier, exportAsJson);
   }
 }

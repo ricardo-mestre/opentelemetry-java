@@ -104,24 +104,28 @@ public class OltpExporterBenchmark {
             new OkHttpSender(
                 "http://localhost:" + server.activeLocalPort() + "/v1/traces",
                 false,
+                TimeUnit.SECONDS.toNanos(10),
                 Collections::emptyMap,
                 null,
                 null,
                 null),
-            MeterProvider::noop);
+            MeterProvider::noop,
+            false);
 
     HttpSender jdkHttpSender =
         HttpSender.create(
             "http://localhost:" + server.activeLocalPort() + "/v1/traces",
             false,
+            TimeUnit.SECONDS.toNanos(10),
             Collections::emptyMap,
+            null,
             null,
             null,
             null);
     if (!jdkHttpSender.getClass().getSimpleName().equals("JdkHttpSender")) {
       throw new IllegalStateException("Must run with java 11+: -PtestJavaVersion=11");
     }
-    jdkHttpExporter = new HttpExporter<>("otlp", "span", jdkHttpSender, MeterProvider::noop);
+    jdkHttpExporter = new HttpExporter<>("otlp", "span", jdkHttpSender, MeterProvider::noop, false);
   }
 
   @TearDown(Level.Trial)

@@ -163,6 +163,7 @@ public class TlsConfigHelper {
     }
   }
 
+  /** Return the {@link SSLSocketFactory}. */
   @Nullable
   public SSLSocketFactory getSslSocketFactory() {
     if (trustManager == null) {
@@ -182,6 +183,11 @@ public class TlsConfigHelper {
   @Nullable
   public X509TrustManager getTrustManager() {
     return trustManager;
+  }
+
+  @Nullable
+  public X509KeyManager getKeyManager() {
+    return keyManager;
   }
 
   private static RuntimeException wrapException(SSLException e) {
