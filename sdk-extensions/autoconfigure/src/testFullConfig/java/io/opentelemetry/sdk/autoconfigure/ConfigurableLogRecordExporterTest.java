@@ -12,8 +12,8 @@ import com.google.common.collect.ImmutableMap;
 import io.opentelemetry.internal.testing.CleanupExtension;
 import io.opentelemetry.sdk.autoconfigure.provider.TestConfigurableLogRecordExporterProvider;
 import io.opentelemetry.sdk.autoconfigure.spi.ConfigProperties;
-import io.opentelemetry.sdk.autoconfigure.spi.ConfigurationException;
-import io.opentelemetry.sdk.autoconfigure.spi.internal.DefaultConfigProperties;
+import io.opentelemetry.sdk.autoconfigure.spi.internal.ConfigPropertiesBridge;
+import io.opentelemetry.sdk.common.config.ConfigurationException;
 import io.opentelemetry.sdk.logs.export.LogRecordExporter;
 import java.io.Closeable;
 import java.net.URL;
@@ -31,7 +31,7 @@ class ConfigurableLogRecordExporterTest {
   @Test
   void configureLogRecordExporters_spiExporter() {
     ConfigProperties config =
-        DefaultConfigProperties.createForTest(
+        ConfigPropertiesBridge.createForTest(
             ImmutableMap.of("test.option", "true", "otel.logs.exporter", "testExporter"));
     List<Closeable> closeables = new ArrayList<>();
 
@@ -58,7 +58,7 @@ class ConfigurableLogRecordExporterTest {
   @Test
   void configureLogRecordExporters_emptyClassLoader() {
     ConfigProperties config =
-        DefaultConfigProperties.createForTest(
+        ConfigPropertiesBridge.createForTest(
             ImmutableMap.of("test.option", "true", "otel.logs.exporter", "testExporter"));
     List<Closeable> closeables = new ArrayList<>();
 

@@ -14,8 +14,8 @@ import io.opentelemetry.exporter.otlp.metrics.OtlpGrpcMetricExporter;
 import io.opentelemetry.internal.testing.CleanupExtension;
 import io.opentelemetry.sdk.autoconfigure.provider.TestConfigurableMetricExporterProvider;
 import io.opentelemetry.sdk.autoconfigure.spi.ConfigProperties;
-import io.opentelemetry.sdk.autoconfigure.spi.ConfigurationException;
-import io.opentelemetry.sdk.autoconfigure.spi.internal.DefaultConfigProperties;
+import io.opentelemetry.sdk.autoconfigure.spi.internal.ConfigPropertiesBridge;
+import io.opentelemetry.sdk.common.config.ConfigurationException;
 import io.opentelemetry.sdk.metrics.export.MetricExporter;
 import io.opentelemetry.sdk.metrics.export.MetricReader;
 import io.opentelemetry.sdk.metrics.export.PeriodicMetricReader;
@@ -35,7 +35,7 @@ class ConfigurableMetricExporterTest {
   @Test
   void configureExporter_spiExporter() {
     ConfigProperties config =
-        DefaultConfigProperties.createForTest(ImmutableMap.of("test.option", "true"));
+        ConfigPropertiesBridge.createForTest(ImmutableMap.of("test.option", "true"));
 
     try (MetricExporter metricExporter =
         MetricExporterConfiguration.configureExporter(
@@ -56,7 +56,7 @@ class ConfigurableMetricExporterTest {
                 MetricExporterConfiguration.configureExporter(
                     "testExporter",
                     MetricExporterConfiguration.metricExporterSpiManager(
-                        DefaultConfigProperties.createForTest(Collections.emptyMap()),
+                        ConfigPropertiesBridge.createForTest(Collections.emptyMap()),
                         new URLClassLoader(new URL[] {}, null))))
         .isInstanceOf(ConfigurationException.class)
         .hasMessageContaining("testExporter");
@@ -69,7 +69,7 @@ class ConfigurableMetricExporterTest {
                 MetricExporterConfiguration.configureExporter(
                     "catExporter",
                     MetricExporterConfiguration.metricExporterSpiManager(
-                        DefaultConfigProperties.createForTest(Collections.emptyMap()),
+                        ConfigPropertiesBridge.createForTest(Collections.emptyMap()),
                         ConfigurableMetricExporterTest.class.getClassLoader())))
         .isInstanceOf(ConfigurationException.class)
         .hasMessageContaining("catExporter");
@@ -78,8 +78,7 @@ class ConfigurableMetricExporterTest {
   @Test
   void configureMetricReaders_multipleWithNone() {
     ConfigProperties config =
-        DefaultConfigProperties.createForTest(
-            ImmutableMap.of("otel.metrics.exporter", "otlp,none"));
+        ConfigPropertiesBridge.createForTest(ImmutableMap.of("otel.metrics.exporter", "otlp,none"));
     List<Closeable> closeables = new ArrayList<>();
 
     assertThatThrownBy(
@@ -97,7 +96,7 @@ class ConfigurableMetricExporterTest {
 
   @Test
   void configureMetricReaders_defaultExporter() {
-    ConfigProperties config = DefaultConfigProperties.createForTest(Collections.emptyMap());
+    ConfigProperties config = ConfigPropertiesBridge.createForTest(Collections.emptyMap());
     List<Closeable> closeables = new ArrayList<>();
 
     List<MetricReader> metricReaders =
@@ -122,7 +121,7 @@ class ConfigurableMetricExporterTest {
   @Test
   void configureMetricReaders_multipleExporters() {
     ConfigProperties config =
-        DefaultConfigProperties.createForTest(
+        ConfigPropertiesBridge.createForTest(
             ImmutableMap.of("otel.metrics.exporter", "otlp,logging"));
     List<Closeable> closeables = new ArrayList<>();
 

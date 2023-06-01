@@ -16,8 +16,8 @@ import io.opentelemetry.sdk.OpenTelemetrySdkBuilder;
 import io.opentelemetry.sdk.autoconfigure.spi.AutoConfigurationCustomizer;
 import io.opentelemetry.sdk.autoconfigure.spi.AutoConfigurationCustomizerProvider;
 import io.opentelemetry.sdk.autoconfigure.spi.ConfigProperties;
-import io.opentelemetry.sdk.autoconfigure.spi.ConfigurationException;
-import io.opentelemetry.sdk.autoconfigure.spi.internal.DefaultConfigProperties;
+import io.opentelemetry.sdk.common.config.ConfigurationException;
+import io.opentelemetry.sdk.internal.DefaultConfigProperties;
 import io.opentelemetry.sdk.logs.SdkLoggerProvider;
 import io.opentelemetry.sdk.logs.SdkLoggerProviderBuilder;
 import io.opentelemetry.sdk.logs.export.LogRecordExporter;
@@ -447,12 +447,16 @@ public final class AutoConfiguredOpenTelemetrySdkBuilder implements AutoConfigur
   }
 
   private ConfigProperties computeConfigProperties() {
-    DefaultConfigProperties properties = DefaultConfigProperties.create(propertiesSupplier.get());
+    DefaultConfigProperties defaultConfigProperties =
+        DefaultConfigProperties.create(propertiesSupplier.get());
+    ConfigProperties configPropertiesBridge =
+        ConfigProperties.createBridge(defaultConfigProperties);
     for (Function<ConfigProperties, Map<String, String>> customizer : propertiesCustomizers) {
-      Map<String, String> overrides = customizer.apply(properties);
-      properties = properties.withOverrides(overrides);
+      Map<String, String> overrides = customizer.apply(configPropertiesBridge);
+      defaultConfigProperties = defaultConfigProperties.withOverrides(overrides);
+      configPropertiesBridge = ConfigProperties.createBridge(defaultConfigProperties);
     }
-    return properties;
+    return configPropertiesBridge;
   }
 
   // Visible for testing

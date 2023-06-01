@@ -10,8 +10,7 @@ import static io.opentelemetry.sdk.testing.assertj.OpenTelemetryAssertions.asser
 import io.opentelemetry.exporter.logging.otlp.OtlpJsonLoggingLogRecordExporter;
 import io.opentelemetry.exporter.logging.otlp.OtlpJsonLoggingMetricExporter;
 import io.opentelemetry.exporter.logging.otlp.OtlpJsonLoggingSpanExporter;
-import io.opentelemetry.sdk.autoconfigure.spi.internal.DefaultConfigProperties;
-import java.util.Collections;
+import io.opentelemetry.sdk.autoconfigure.spi.internal.ConfigPropertiesBridge;
 import org.junit.jupiter.api.Test;
 
 class LoggingExporterProviderTest {
@@ -20,8 +19,7 @@ class LoggingExporterProviderTest {
   void logRecordExporterProvider() {
     LoggingLogRecordExporterProvider provider = new LoggingLogRecordExporterProvider();
     assertThat(provider.getName()).isEqualTo("logging-otlp");
-    assertThat(
-            provider.createExporter(DefaultConfigProperties.createForTest(Collections.emptyMap())))
+    assertThat(provider.createExporter(ConfigPropertiesBridge.getEmptyInstance()))
         .isInstanceOf(OtlpJsonLoggingLogRecordExporter.class);
   }
 
@@ -29,8 +27,7 @@ class LoggingExporterProviderTest {
   void metricExporterProvider() {
     LoggingMetricExporterProvider provider = new LoggingMetricExporterProvider();
     assertThat(provider.getName()).isEqualTo("logging-otlp");
-    assertThat(
-            provider.createExporter(DefaultConfigProperties.createForTest(Collections.emptyMap())))
+    assertThat(provider.createExporter(ConfigPropertiesBridge.getEmptyInstance()))
         .isInstanceOf(OtlpJsonLoggingMetricExporter.class);
   }
 
@@ -38,8 +35,7 @@ class LoggingExporterProviderTest {
   void spanExporterProvider() {
     LoggingSpanExporterProvider provider = new LoggingSpanExporterProvider();
     assertThat(provider.getName()).isEqualTo("logging-otlp");
-    assertThat(
-            provider.createExporter(DefaultConfigProperties.createForTest(Collections.emptyMap())))
+    assertThat(provider.createExporter(ConfigPropertiesBridge.getEmptyInstance()))
         .isInstanceOf(OtlpJsonLoggingSpanExporter.class);
   }
 }

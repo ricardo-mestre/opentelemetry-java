@@ -8,8 +8,8 @@ package io.opentelemetry.sdk.autoconfigure;
 import static io.opentelemetry.sdk.autoconfigure.SpanExporterConfiguration.configureExporter;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import io.opentelemetry.sdk.autoconfigure.spi.ConfigurationException;
-import io.opentelemetry.sdk.autoconfigure.spi.internal.DefaultConfigProperties;
+import io.opentelemetry.sdk.autoconfigure.spi.internal.ConfigPropertiesBridge;
+import io.opentelemetry.sdk.common.config.ConfigurationException;
 import io.opentelemetry.sdk.trace.export.SpanExporter;
 import java.util.Collections;
 import org.junit.jupiter.api.Test;
@@ -20,7 +20,7 @@ class SpanExporterConfigurationTest {
   void configureExporter_KnownSpiExportersNotOnClasspath() {
     NamedSpiManager<SpanExporter> spiExportersManager =
         SpanExporterConfiguration.spanExporterSpiManager(
-            DefaultConfigProperties.createForTest(Collections.emptyMap()),
+            ConfigPropertiesBridge.createForTest(Collections.emptyMap()),
             SpanExporterConfigurationTest.class.getClassLoader());
 
     assertThatThrownBy(() -> configureExporter("jaeger", spiExportersManager))

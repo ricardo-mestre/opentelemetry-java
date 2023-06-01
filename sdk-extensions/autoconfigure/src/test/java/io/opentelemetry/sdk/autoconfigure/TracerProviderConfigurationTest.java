@@ -13,9 +13,9 @@ import com.google.common.collect.ImmutableMap;
 import io.opentelemetry.api.metrics.MeterProvider;
 import io.opentelemetry.internal.testing.CleanupExtension;
 import io.opentelemetry.sdk.autoconfigure.spi.ConfigProperties;
-import io.opentelemetry.sdk.autoconfigure.spi.ConfigurationException;
-import io.opentelemetry.sdk.autoconfigure.spi.internal.DefaultConfigProperties;
+import io.opentelemetry.sdk.autoconfigure.spi.internal.ConfigPropertiesBridge;
 import io.opentelemetry.sdk.common.CompletableResultCode;
+import io.opentelemetry.sdk.common.config.ConfigurationException;
 import io.opentelemetry.sdk.trace.SdkTracerProvider;
 import io.opentelemetry.sdk.trace.SdkTracerProviderBuilder;
 import io.opentelemetry.sdk.trace.SpanLimits;
@@ -45,8 +45,7 @@ import org.mockito.quality.Strictness;
 @MockitoSettings(strictness = Strictness.LENIENT)
 class TracerProviderConfigurationTest {
 
-  private static final ConfigProperties EMPTY =
-      DefaultConfigProperties.createForTest(Collections.emptyMap());
+  private static final ConfigProperties EMPTY = ConfigPropertiesBridge.getEmptyInstance();
 
   @RegisterExtension CleanupExtension cleanup = new CleanupExtension();
 
@@ -70,7 +69,7 @@ class TracerProviderConfigurationTest {
     SdkTracerProviderBuilder tracerProviderBuilder = SdkTracerProvider.builder();
     TracerProviderConfiguration.configureTracerProvider(
         tracerProviderBuilder,
-        DefaultConfigProperties.createForTest(properties),
+        ConfigPropertiesBridge.createForTest(properties),
         TracerProviderConfiguration.class.getClassLoader(),
         MeterProvider.noop(),
         (a, unused) -> a,
@@ -126,7 +125,7 @@ class TracerProviderConfigurationTest {
 
     try (BatchSpanProcessor processor =
         TracerProviderConfiguration.configureBatchSpanProcessor(
-            DefaultConfigProperties.createForTest(properties),
+            ConfigPropertiesBridge.createForTest(properties),
             mockSpanExporter,
             MeterProvider.noop())) {
       assertThat(processor)
@@ -156,7 +155,7 @@ class TracerProviderConfigurationTest {
 
     SpanLimits config =
         TracerProviderConfiguration.configureSpanLimits(
-            DefaultConfigProperties.createForTest(
+            ConfigPropertiesBridge.createForTest(
                 ImmutableMap.of(
                     "otel.attribute.value.length.limit", "100",
                     "otel.attribute.count.limit", "5")));
@@ -171,7 +170,7 @@ class TracerProviderConfigurationTest {
 
     config =
         TracerProviderConfiguration.configureSpanLimits(
-            DefaultConfigProperties.createForTest(
+            ConfigPropertiesBridge.createForTest(
                 ImmutableMap.of(
                     "otel.attribute.value.length.limit", "100",
                     "otel.span.attribute.value.length.limit", "200",
@@ -200,7 +199,7 @@ class TracerProviderConfigurationTest {
     assertThat(
             TracerProviderConfiguration.configureSampler(
                 "traceidratio",
-                DefaultConfigProperties.createForTest(
+                ConfigPropertiesBridge.createForTest(
                     Collections.singletonMap("otel.traces.sampler.arg", "0.5")),
                 TracerProviderConfiguration.class.getClassLoader()))
         .isEqualTo(Sampler.traceIdRatioBased(0.5));
@@ -221,7 +220,7 @@ class TracerProviderConfigurationTest {
     assertThat(
             TracerProviderConfiguration.configureSampler(
                 "parentbased_traceidratio",
-                DefaultConfigProperties.createForTest(
+                ConfigPropertiesBridge.createForTest(
                     Collections.singletonMap("otel.traces.sampler.arg", "0.4")),
                 TracerProviderConfiguration.class.getClassLoader()))
         .isEqualTo(Sampler.parentBased(Sampler.traceIdRatioBased(0.4)));

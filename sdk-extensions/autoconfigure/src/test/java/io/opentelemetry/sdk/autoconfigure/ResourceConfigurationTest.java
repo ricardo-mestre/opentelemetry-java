@@ -14,7 +14,7 @@ import com.google.common.collect.ImmutableMap;
 import io.opentelemetry.api.common.AttributeKey;
 import io.opentelemetry.api.common.Attributes;
 import io.opentelemetry.sdk.autoconfigure.spi.ConfigProperties;
-import io.opentelemetry.sdk.autoconfigure.spi.internal.DefaultConfigProperties;
+import io.opentelemetry.sdk.autoconfigure.spi.internal.ConfigPropertiesBridge;
 import io.opentelemetry.sdk.resources.Resource;
 import io.opentelemetry.semconv.resource.attributes.ResourceAttributes;
 import java.util.HashMap;
@@ -35,7 +35,7 @@ class ResourceConfigurationTest {
 
     assertThat(
             ResourceConfiguration.configureResource(
-                DefaultConfigProperties.create(props),
+                ConfigPropertiesBridge.createForTest(props),
                 ResourceConfigurationTest.class.getClassLoader(),
                 (r, c) -> r))
         .isEqualTo(
@@ -49,7 +49,7 @@ class ResourceConfigurationTest {
   @Test
   void resourceFromConfig_empty() {
     Attributes attributes =
-        ResourceConfiguration.getAttributes(DefaultConfigProperties.createForTest(emptyMap()));
+        ResourceConfiguration.getAttributes(ConfigPropertiesBridge.createForTest(emptyMap()));
 
     assertThat(attributes).isEmpty();
   }
@@ -58,7 +58,7 @@ class ResourceConfigurationTest {
   void resourceFromConfig() {
     Attributes attributes =
         ResourceConfiguration.getAttributes(
-            DefaultConfigProperties.createForTest(
+            ConfigPropertiesBridge.createForTest(
                 singletonMap(
                     ResourceConfiguration.ATTRIBUTE_PROPERTY,
                     "service.name=myService,appName=MyApp")));
@@ -73,7 +73,7 @@ class ResourceConfigurationTest {
   void serviceName() {
     Attributes attributes =
         ResourceConfiguration.getAttributes(
-            DefaultConfigProperties.createForTest(
+            ConfigPropertiesBridge.createForTest(
                 singletonMap(ResourceConfiguration.SERVICE_NAME_PROPERTY, "myService")));
 
     assertThat(attributes).hasSize(1).containsEntry(ResourceAttributes.SERVICE_NAME, "myService");
@@ -83,7 +83,7 @@ class ResourceConfigurationTest {
   void resourceFromConfig_overrideServiceName() {
     Attributes attributes =
         ResourceConfiguration.getAttributes(
-            DefaultConfigProperties.createForTest(
+            ConfigPropertiesBridge.createForTest(
                 ImmutableMap.of(
                     ResourceConfiguration.ATTRIBUTE_PROPERTY,
                     "service.name=myService,appName=MyApp",
@@ -100,7 +100,7 @@ class ResourceConfigurationTest {
   void resourceFromConfig_emptyEnvVar() {
     Attributes attributes =
         ResourceConfiguration.getAttributes(
-            DefaultConfigProperties.createForTest(
+            ConfigPropertiesBridge.createForTest(
                 singletonMap(ResourceConfiguration.ATTRIBUTE_PROPERTY, "")));
 
     assertThat(attributes).isEmpty();
@@ -109,7 +109,7 @@ class ResourceConfigurationTest {
   @Test
   void filterAttributes() {
     ConfigProperties configProperties =
-        DefaultConfigProperties.createForTest(ImmutableMap.of(DISABLED_ATTRIBUTE_KEYS, "foo,bar"));
+        ConfigPropertiesBridge.createForTest(ImmutableMap.of(DISABLED_ATTRIBUTE_KEYS, "foo,bar"));
 
     Resource resourceNoSchema =
         Resource.builder().put("foo", "val").put("bar", "val").put("baz", "val").build();

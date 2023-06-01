@@ -1,2 +1,7 @@
 Comparing source compatibility of  against 
-No changes.
+***  MODIFIED INTERFACE: PUBLIC ABSTRACT io.opentelemetry.sdk.autoconfigure.spi.ConfigProperties  (not serializable)
+	===  CLASS FILE FORMAT VERSION: 52.0 <- 52.0
+	+++  NEW METHOD: PUBLIC(+) STATIC(+) io.opentelemetry.sdk.autoconfigure.spi.ConfigProperties createBridge(io.opentelemetry.sdk.common.config.ConfigProperties)
+===  UNCHANGED CLASS: PUBLIC FINAL io.opentelemetry.sdk.autoconfigure.spi.ConfigurationException  (compatible)
+	===  CLASS FILE FORMAT VERSION: 52.0 <- 52.0
+	+++  NEW ANNOTATION: java.lang.Deprecated

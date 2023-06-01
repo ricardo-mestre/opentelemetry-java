@@ -11,7 +11,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import com.google.common.collect.ImmutableMap;
 import io.opentelemetry.api.metrics.MeterProvider;
 import io.opentelemetry.internal.testing.CleanupExtension;
-import io.opentelemetry.sdk.autoconfigure.spi.internal.DefaultConfigProperties;
+import io.opentelemetry.sdk.autoconfigure.spi.internal.ConfigPropertiesBridge;
 import io.opentelemetry.sdk.logs.LogLimits;
 import io.opentelemetry.sdk.logs.LogRecordProcessor;
 import io.opentelemetry.sdk.logs.SdkLoggerProvider;
@@ -43,7 +43,7 @@ class LoggerProviderConfigurationTest {
     SdkLoggerProviderBuilder builder = SdkLoggerProvider.builder();
     LoggerProviderConfiguration.configureLoggerProvider(
         builder,
-        DefaultConfigProperties.createForTest(properties),
+        ConfigPropertiesBridge.createForTest(properties),
         LoggerProviderConfiguration.class.getClassLoader(),
         MeterProvider.noop(),
         (a, unused) -> a,
@@ -72,12 +72,12 @@ class LoggerProviderConfigurationTest {
   void configureLogLimits() {
     assertThat(
             LoggerProviderConfiguration.configureLogLimits(
-                DefaultConfigProperties.createForTest(Collections.emptyMap())))
+                ConfigPropertiesBridge.createForTest(Collections.emptyMap())))
         .isEqualTo(LogLimits.getDefault());
 
     LogLimits config =
         LoggerProviderConfiguration.configureLogLimits(
-            DefaultConfigProperties.createForTest(
+            ConfigPropertiesBridge.createForTest(
                 ImmutableMap.of(
                     "otel.attribute.value.length.limit", "100",
                     "otel.attribute.count.limit", "5")));

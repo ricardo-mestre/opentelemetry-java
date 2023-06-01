@@ -12,7 +12,7 @@ import io.opentelemetry.api.metrics.MeterProvider;
 import io.opentelemetry.exporter.logging.SystemOutLogRecordExporter;
 import io.opentelemetry.exporter.otlp.logs.OtlpGrpcLogRecordExporter;
 import io.opentelemetry.internal.testing.CleanupExtension;
-import io.opentelemetry.sdk.autoconfigure.spi.internal.DefaultConfigProperties;
+import io.opentelemetry.sdk.autoconfigure.spi.internal.ConfigPropertiesBridge;
 import io.opentelemetry.sdk.logs.LogRecordProcessor;
 import io.opentelemetry.sdk.logs.SdkLoggerProvider;
 import io.opentelemetry.sdk.logs.SdkLoggerProviderBuilder;
@@ -42,7 +42,7 @@ class LoggerProviderConfigurationTest {
     SdkLoggerProviderBuilder builder = SdkLoggerProvider.builder();
     LoggerProviderConfiguration.configureLoggerProvider(
         builder,
-        DefaultConfigProperties.createForTest(Collections.emptyMap()),
+        ConfigPropertiesBridge.createForTest(Collections.emptyMap()),
         LoggerProviderConfiguration.class.getClassLoader(),
         MeterProvider.noop(),
         (a, unused) -> a,
@@ -85,7 +85,7 @@ class LoggerProviderConfigurationTest {
 
     List<LogRecordProcessor> logRecordProcessors =
         LoggerProviderConfiguration.configureLogRecordProcessors(
-            DefaultConfigProperties.createForTest(Collections.emptyMap()),
+            ConfigPropertiesBridge.createForTest(Collections.emptyMap()),
             ImmutableMap.of(
                 "logging",
                 SystemOutLogRecordExporter.create(),
@@ -115,7 +115,7 @@ class LoggerProviderConfigurationTest {
 
     try (BatchLogRecordProcessor processor =
         LoggerProviderConfiguration.configureBatchLogRecordProcessor(
-            DefaultConfigProperties.createForTest(properties),
+            ConfigPropertiesBridge.createForTest(properties),
             SystemOutLogRecordExporter.create(),
             MeterProvider.noop())) {
       assertThat(processor)

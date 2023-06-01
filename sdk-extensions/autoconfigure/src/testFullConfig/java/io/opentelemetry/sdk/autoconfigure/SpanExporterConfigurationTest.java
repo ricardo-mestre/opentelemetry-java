@@ -15,8 +15,8 @@ import io.opentelemetry.exporter.logging.otlp.OtlpJsonLoggingSpanExporter;
 import io.opentelemetry.exporter.otlp.trace.OtlpGrpcSpanExporter;
 import io.opentelemetry.exporter.zipkin.ZipkinSpanExporter;
 import io.opentelemetry.sdk.autoconfigure.spi.ConfigProperties;
-import io.opentelemetry.sdk.autoconfigure.spi.ConfigurationException;
-import io.opentelemetry.sdk.autoconfigure.spi.internal.DefaultConfigProperties;
+import io.opentelemetry.sdk.autoconfigure.spi.internal.ConfigPropertiesBridge;
+import io.opentelemetry.sdk.common.config.ConfigurationException;
 import io.opentelemetry.sdk.trace.export.SpanExporter;
 import java.util.Collections;
 import org.junit.jupiter.api.Test;
@@ -27,7 +27,7 @@ class SpanExporterConfigurationTest {
   void configureExporter_KnownSpiExportersOnClasspath() {
     NamedSpiManager<SpanExporter> spiExportersManager =
         SpanExporterConfiguration.spanExporterSpiManager(
-            DefaultConfigProperties.createForTest(Collections.emptyMap()),
+            ConfigPropertiesBridge.createForTest(Collections.emptyMap()),
             SpanExporterConfigurationTest.class.getClassLoader());
 
     assertThat(SpanExporterConfiguration.configureExporter("jaeger", spiExportersManager))
@@ -45,8 +45,7 @@ class SpanExporterConfigurationTest {
   @Test
   void configureOtlpSpansUnsupportedProtocol() {
     ConfigProperties config =
-        DefaultConfigProperties.createForTest(
-            ImmutableMap.of("otel.exporter.otlp.protocol", "foo"));
+        ConfigPropertiesBridge.createForTest(ImmutableMap.of("otel.exporter.otlp.protocol", "foo"));
     assertThatThrownBy(
             () ->
                 SpanExporterConfiguration.configureExporter(
@@ -61,7 +60,7 @@ class SpanExporterConfigurationTest {
   @Test
   void configureOtlpTimeout() {
     ConfigProperties config =
-        DefaultConfigProperties.createForTest(
+        ConfigPropertiesBridge.createForTest(
             Collections.singletonMap("otel.exporter.otlp.timeout", "10"));
     try (SpanExporter exporter =
         SpanExporterConfiguration.configureExporter(

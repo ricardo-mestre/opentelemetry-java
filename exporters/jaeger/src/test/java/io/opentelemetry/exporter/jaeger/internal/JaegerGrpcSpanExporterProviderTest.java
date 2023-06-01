@@ -8,9 +8,8 @@ package io.opentelemetry.exporter.jaeger.internal;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import io.opentelemetry.exporter.jaeger.JaegerGrpcSpanExporter;
-import io.opentelemetry.sdk.autoconfigure.spi.internal.DefaultConfigProperties;
+import io.opentelemetry.sdk.autoconfigure.spi.internal.ConfigPropertiesBridge;
 import io.opentelemetry.sdk.trace.export.SpanExporter;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import okhttp3.HttpUrl;
@@ -29,7 +28,7 @@ class JaegerGrpcSpanExporterProviderTest {
   @Test
   void createExporter_Default() {
     try (SpanExporter spanExporter =
-        provider.createExporter(DefaultConfigProperties.createForTest(Collections.emptyMap()))) {
+        provider.createExporter(ConfigPropertiesBridge.getEmptyInstance())) {
       assertThat(spanExporter).isInstanceOf(JaegerGrpcSpanExporter.class);
       assertThat(spanExporter)
           .extracting("delegate")
@@ -51,7 +50,7 @@ class JaegerGrpcSpanExporterProviderTest {
     config.put("otel.exporter.jaeger.timeout", "1s");
 
     try (SpanExporter spanExporter =
-        provider.createExporter(DefaultConfigProperties.createForTest(config))) {
+        provider.createExporter(ConfigPropertiesBridge.createForTest(config))) {
       assertThat(spanExporter).isInstanceOf(JaegerGrpcSpanExporter.class);
       assertThat(spanExporter)
           .extracting("delegate")

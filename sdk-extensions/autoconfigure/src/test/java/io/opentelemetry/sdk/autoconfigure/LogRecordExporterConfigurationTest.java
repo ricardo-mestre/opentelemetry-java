@@ -11,12 +11,11 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.google.common.collect.ImmutableMap;
 import io.opentelemetry.internal.testing.CleanupExtension;
-import io.opentelemetry.sdk.autoconfigure.spi.ConfigurationException;
-import io.opentelemetry.sdk.autoconfigure.spi.internal.DefaultConfigProperties;
+import io.opentelemetry.sdk.autoconfigure.spi.internal.ConfigPropertiesBridge;
+import io.opentelemetry.sdk.common.config.ConfigurationException;
 import io.opentelemetry.sdk.logs.export.LogRecordExporter;
 import java.io.Closeable;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
@@ -29,7 +28,7 @@ class LogRecordExporterConfigurationTest {
   void configureExporter_KnownSpiExportersNotOnClasspath() {
     NamedSpiManager<LogRecordExporter> spiExportersManager =
         LogRecordExporterConfiguration.logRecordExporterSpiManager(
-            DefaultConfigProperties.createForTest(Collections.emptyMap()),
+            ConfigPropertiesBridge.getEmptyInstance(),
             LogRecordExporterConfigurationTest.class.getClassLoader());
 
     assertThatThrownBy(() -> configureExporter("logging", spiExportersManager))
@@ -60,7 +59,7 @@ class LogRecordExporterConfigurationTest {
     assertThatThrownBy(
             () ->
                 LogRecordExporterConfiguration.configureLogRecordExporters(
-                    DefaultConfigProperties.createForTest(
+                    ConfigPropertiesBridge.createForTest(
                         ImmutableMap.of("otel.logs.exporter", "otlp,otlp")),
                     LogRecordExporterConfiguration.class.getClassLoader(),
                     (a, unused) -> a,
@@ -78,7 +77,7 @@ class LogRecordExporterConfigurationTest {
     assertThatThrownBy(
             () ->
                 LogRecordExporterConfiguration.configureLogRecordExporters(
-                    DefaultConfigProperties.createForTest(
+                    ConfigPropertiesBridge.createForTest(
                         ImmutableMap.of("otel.logs.exporter", "foo")),
                     LogRecordExporterConfiguration.class.getClassLoader(),
                     (a, unused) -> a,
@@ -96,7 +95,7 @@ class LogRecordExporterConfigurationTest {
     assertThatThrownBy(
             () ->
                 LogRecordExporterConfiguration.configureLogRecordExporters(
-                    DefaultConfigProperties.createForTest(
+                    ConfigPropertiesBridge.createForTest(
                         ImmutableMap.of("otel.logs.exporter", "otlp,none")),
                     LogRecordExporterConfiguration.class.getClassLoader(),
                     (a, unused) -> a,

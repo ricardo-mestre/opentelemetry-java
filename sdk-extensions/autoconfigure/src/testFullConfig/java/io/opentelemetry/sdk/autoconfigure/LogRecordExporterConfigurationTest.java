@@ -12,8 +12,8 @@ import com.google.common.collect.ImmutableMap;
 import io.opentelemetry.exporter.logging.SystemOutLogRecordExporter;
 import io.opentelemetry.exporter.logging.otlp.OtlpJsonLoggingLogRecordExporter;
 import io.opentelemetry.exporter.otlp.logs.OtlpGrpcLogRecordExporter;
-import io.opentelemetry.sdk.autoconfigure.spi.ConfigurationException;
-import io.opentelemetry.sdk.autoconfigure.spi.internal.DefaultConfigProperties;
+import io.opentelemetry.sdk.autoconfigure.spi.internal.ConfigPropertiesBridge;
+import io.opentelemetry.sdk.common.config.ConfigurationException;
 import io.opentelemetry.sdk.logs.export.LogRecordExporter;
 import java.util.Collections;
 import org.junit.jupiter.api.Test;
@@ -24,7 +24,7 @@ class LogRecordExporterConfigurationTest {
   void configureExporter_KnownSpiExportersOnClasspath() {
     NamedSpiManager<LogRecordExporter> spiExportersManager =
         LogRecordExporterConfiguration.logRecordExporterSpiManager(
-            DefaultConfigProperties.createForTest(Collections.emptyMap()),
+            ConfigPropertiesBridge.createForTest(Collections.emptyMap()),
             LogRecordExporterConfigurationTest.class.getClassLoader());
 
     assertThat(LogRecordExporterConfiguration.configureExporter("logging", spiExportersManager))
@@ -43,7 +43,7 @@ class LogRecordExporterConfigurationTest {
                 LogRecordExporterConfiguration.configureExporter(
                     "otlp",
                     LogRecordExporterConfiguration.logRecordExporterSpiManager(
-                        DefaultConfigProperties.createForTest(
+                        ConfigPropertiesBridge.createForTest(
                             ImmutableMap.of("otel.exporter.otlp.protocol", "foo")),
                         LogRecordExporterConfiguration.class.getClassLoader())))
         .isInstanceOf(ConfigurationException.class)

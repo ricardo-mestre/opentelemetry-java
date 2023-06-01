@@ -14,7 +14,7 @@ import edu.berkeley.cs.jqf.fuzz.junit.GuidedFuzzing;
 import edu.berkeley.cs.jqf.fuzz.random.NoGuidance;
 import io.opentelemetry.api.common.Attributes;
 import io.opentelemetry.api.internal.PercentEscaper;
-import io.opentelemetry.sdk.autoconfigure.spi.internal.DefaultConfigProperties;
+import io.opentelemetry.sdk.autoconfigure.spi.internal.ConfigPropertiesBridge;
 import org.junit.jupiter.api.Test;
 import org.junit.runner.Result;
 import org.junit.runner.RunWith;
@@ -31,7 +31,7 @@ class ResourceConfigurationFuzzTest {
     public void getAttributesWithRandomValues(String value1, String value2) {
       Attributes attributes =
           ResourceConfiguration.getAttributes(
-              DefaultConfigProperties.createForTest(
+              ConfigPropertiesBridge.createForTest(
                   singletonMap(
                       ResourceConfiguration.ATTRIBUTE_PROPERTY,
                       "key1=" + escaper.escape(value1) + ",key2=" + escaper.escape(value2))));

@@ -15,7 +15,7 @@ import com.sun.net.httpserver.HttpServer;
 import io.opentelemetry.exporter.prometheus.PrometheusHttpServer;
 import io.opentelemetry.sdk.autoconfigure.spi.AutoConfigurationCustomizer;
 import io.opentelemetry.sdk.autoconfigure.spi.ConfigProperties;
-import io.opentelemetry.sdk.autoconfigure.spi.internal.DefaultConfigProperties;
+import io.opentelemetry.sdk.autoconfigure.spi.internal.ConfigPropertiesBridge;
 import io.opentelemetry.sdk.metrics.SdkMeterProvider;
 import io.opentelemetry.sdk.metrics.SdkMeterProviderBuilder;
 import java.io.IOException;
@@ -94,7 +94,7 @@ class PrometheusCustomizerProviderTest {
   void configurePrometheusHttpServer_Default() {
     try (PrometheusHttpServer prometheusHttpServer =
         PrometheusCustomizerProvider.configurePrometheusHttpServer(
-            DefaultConfigProperties.createForTest(Collections.emptyMap()))) {
+            ConfigPropertiesBridge.createForTest(Collections.emptyMap()))) {
       assertThat(prometheusHttpServer)
           .extracting("server", as(InstanceOfAssertFactories.type(HttpServer.class)))
           .satisfies(
@@ -121,7 +121,7 @@ class PrometheusCustomizerProviderTest {
 
     try (PrometheusHttpServer prometheusHttpServer =
         PrometheusCustomizerProvider.configurePrometheusHttpServer(
-            DefaultConfigProperties.createForTest(config))) {
+            ConfigPropertiesBridge.createForTest(config))) {
       assertThat(prometheusHttpServer)
           .extracting("server", as(InstanceOfAssertFactories.type(HttpServer.class)))
           .satisfies(

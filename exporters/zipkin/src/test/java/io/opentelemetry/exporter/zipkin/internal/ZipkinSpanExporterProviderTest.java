@@ -8,9 +8,8 @@ package io.opentelemetry.exporter.zipkin.internal;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import io.opentelemetry.exporter.zipkin.ZipkinSpanExporter;
-import io.opentelemetry.sdk.autoconfigure.spi.internal.DefaultConfigProperties;
+import io.opentelemetry.sdk.autoconfigure.spi.internal.ConfigPropertiesBridge;
 import io.opentelemetry.sdk.trace.export.SpanExporter;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import okhttp3.HttpUrl;
@@ -28,7 +27,7 @@ class ZipkinSpanExporterProviderTest {
   @Test
   void createExporter_Default() {
     try (SpanExporter spanExporter =
-        provider.createExporter(DefaultConfigProperties.createForTest(Collections.emptyMap()))) {
+        provider.createExporter(ConfigPropertiesBridge.getEmptyInstance())) {
       assertThat(spanExporter).isInstanceOf(ZipkinSpanExporter.class);
       assertThat(spanExporter)
           .extracting("sender")
@@ -49,7 +48,7 @@ class ZipkinSpanExporterProviderTest {
     config.put("otel.exporter.zipkin.timeout", "1s");
 
     try (SpanExporter spanExporter =
-        provider.createExporter(DefaultConfigProperties.createForTest(config))) {
+        provider.createExporter(ConfigPropertiesBridge.createForTest(config))) {
       assertThat(spanExporter).isInstanceOf(ZipkinSpanExporter.class);
       assertThat(spanExporter)
           .extracting("sender")

@@ -18,14 +18,13 @@ import io.opentelemetry.internal.testing.CleanupExtension;
 import io.opentelemetry.sdk.OpenTelemetrySdk;
 import io.opentelemetry.sdk.autoconfigure.spi.AutoConfigurationCustomizerProvider;
 import io.opentelemetry.sdk.autoconfigure.spi.ConfigProperties;
-import io.opentelemetry.sdk.autoconfigure.spi.ConfigurationException;
-import io.opentelemetry.sdk.autoconfigure.spi.internal.DefaultConfigProperties;
+import io.opentelemetry.sdk.autoconfigure.spi.internal.ConfigPropertiesBridge;
 import io.opentelemetry.sdk.autoconfigure.spi.metrics.ConfigurableMetricExporterProvider;
+import io.opentelemetry.sdk.common.config.ConfigurationException;
 import io.opentelemetry.sdk.metrics.export.MetricExporter;
 import io.opentelemetry.sdk.metrics.export.MetricReader;
 import java.io.Closeable;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -35,8 +34,7 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 
 class MetricExporterConfigurationTest {
 
-  private static final ConfigProperties EMPTY =
-      DefaultConfigProperties.createForTest(Collections.emptyMap());
+  private static final ConfigProperties EMPTY = ConfigPropertiesBridge.getEmptyInstance();
 
   @RegisterExtension CleanupExtension cleanup = new CleanupExtension();
 
@@ -73,7 +71,7 @@ class MetricExporterConfigurationTest {
     try (OpenTelemetrySdk sdk =
         AutoConfiguredOpenTelemetrySdk.builder()
             .setResultAsGlobal(false)
-            .setConfig(DefaultConfigProperties.createForTest(config))
+            .setConfig(ConfigPropertiesBridge.createForTest(config))
             .build()
             .getOpenTelemetrySdk()) {
       assertThat(sdk.getSdkMeterProvider())
@@ -107,7 +105,7 @@ class MetricExporterConfigurationTest {
                 MetricExporterConfiguration.configureExporter(
                     "otlp",
                     MetricExporterConfiguration.metricExporterSpiManager(
-                        DefaultConfigProperties.createForTest(
+                        ConfigPropertiesBridge.createForTest(
                             ImmutableMap.of("otel.exporter.otlp.protocol", "foo")),
                         MetricExporterConfigurationTest.class.getClassLoader())))
         .isInstanceOf(ConfigurationException.class)

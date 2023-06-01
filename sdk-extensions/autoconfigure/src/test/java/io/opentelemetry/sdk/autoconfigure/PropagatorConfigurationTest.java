@@ -9,8 +9,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import io.opentelemetry.context.propagation.ContextPropagators;
-import io.opentelemetry.sdk.autoconfigure.spi.ConfigurationException;
-import io.opentelemetry.sdk.autoconfigure.spi.internal.DefaultConfigProperties;
+import io.opentelemetry.sdk.autoconfigure.spi.internal.ConfigPropertiesBridge;
+import io.opentelemetry.sdk.common.config.ConfigurationException;
 import java.util.Collections;
 import org.junit.jupiter.api.Test;
 
@@ -20,7 +20,7 @@ class PropagatorConfigurationTest {
   void defaultPropagators() {
     ContextPropagators contextPropagators =
         PropagatorConfiguration.configurePropagators(
-            DefaultConfigProperties.createForTest(Collections.emptyMap()),
+            ConfigPropertiesBridge.getEmptyInstance(),
             PropagatorConfiguration.class.getClassLoader(),
             (a, unused) -> a);
 
@@ -32,7 +32,7 @@ class PropagatorConfigurationTest {
   void configurePropagators_none() {
     ContextPropagators contextPropagators =
         PropagatorConfiguration.configurePropagators(
-            DefaultConfigProperties.createForTest(
+            ConfigPropertiesBridge.createForTest(
                 Collections.singletonMap("otel.propagators", "none")),
             PropagatorConfiguration.class.getClassLoader(),
             (a, unused) -> a);
@@ -45,7 +45,7 @@ class PropagatorConfigurationTest {
     assertThatThrownBy(
             () ->
                 PropagatorConfiguration.configurePropagators(
-                    DefaultConfigProperties.createForTest(
+                    ConfigPropertiesBridge.createForTest(
                         Collections.singletonMap("otel.propagators", "none,blather")),
                     PropagatorConfiguration.class.getClassLoader(),
                     (a, unused) -> a))
@@ -58,7 +58,7 @@ class PropagatorConfigurationTest {
     assertThatThrownBy(
             () ->
                 PropagatorConfiguration.configurePropagators(
-                    DefaultConfigProperties.createForTest(
+                    ConfigPropertiesBridge.createForTest(
                         Collections.singletonMap("otel.propagators", "b3")),
                     PropagatorConfiguration.class.getClassLoader(),
                     (a, config) -> a))

@@ -16,8 +16,8 @@ import io.opentelemetry.exporter.zipkin.ZipkinSpanExporter;
 import io.opentelemetry.internal.testing.CleanupExtension;
 import io.opentelemetry.sdk.autoconfigure.provider.TestConfigurableSpanExporterProvider;
 import io.opentelemetry.sdk.autoconfigure.spi.ConfigProperties;
-import io.opentelemetry.sdk.autoconfigure.spi.ConfigurationException;
-import io.opentelemetry.sdk.autoconfigure.spi.internal.DefaultConfigProperties;
+import io.opentelemetry.sdk.autoconfigure.spi.internal.ConfigPropertiesBridge;
+import io.opentelemetry.sdk.common.config.ConfigurationException;
 import io.opentelemetry.sdk.trace.SpanProcessor;
 import io.opentelemetry.sdk.trace.export.BatchSpanProcessor;
 import io.opentelemetry.sdk.trace.export.SimpleSpanProcessor;
@@ -40,7 +40,7 @@ class ConfigurableSpanExporterTest {
   @Test
   void configureSpanExporters_spiExporter() {
     ConfigProperties config =
-        DefaultConfigProperties.createForTest(
+        ConfigPropertiesBridge.createForTest(
             ImmutableMap.of("test.option", "true", "otel.traces.exporter", "testExporter"));
     List<Closeable> closeables = new ArrayList<>();
 
@@ -63,7 +63,7 @@ class ConfigurableSpanExporterTest {
   @Test
   void configureSpanExporters_emptyClassLoader() {
     ConfigProperties config =
-        DefaultConfigProperties.createForTest(
+        ConfigPropertiesBridge.createForTest(
             ImmutableMap.of("test.option", "true", "otel.traces.exporter", "testExporter"));
     List<Closeable> closeables = new ArrayList<>();
 
@@ -83,7 +83,7 @@ class ConfigurableSpanExporterTest {
   @Test
   void configureSpanExporters_duplicates() {
     ConfigProperties config =
-        DefaultConfigProperties.createForTest(
+        ConfigPropertiesBridge.createForTest(
             ImmutableMap.of("otel.traces.exporter", "otlp,otlp,logging"));
     List<Closeable> closeables = new ArrayList<>();
 
@@ -103,7 +103,7 @@ class ConfigurableSpanExporterTest {
   @Test
   void configureSpanExporters_multipleWithNone() {
     ConfigProperties config =
-        DefaultConfigProperties.createForTest(ImmutableMap.of("otel.traces.exporter", "otlp,none"));
+        ConfigPropertiesBridge.createForTest(ImmutableMap.of("otel.traces.exporter", "otlp,none"));
     List<Closeable> closeables = new ArrayList<>();
 
     assertThatThrownBy(
@@ -136,7 +136,7 @@ class ConfigurableSpanExporterTest {
 
     List<SpanProcessor> spanProcessors =
         TracerProviderConfiguration.configureSpanProcessors(
-            DefaultConfigProperties.createForTest(
+            ConfigPropertiesBridge.createForTest(
                 Collections.singletonMap("otel.traces.exporter", exporterName)),
             ImmutableMap.of(exporterName, LoggingSpanExporter.create()),
             MeterProvider.noop(),
@@ -154,7 +154,7 @@ class ConfigurableSpanExporterTest {
 
     List<SpanProcessor> spanProcessors =
         TracerProviderConfiguration.configureSpanProcessors(
-            DefaultConfigProperties.createForTest(
+            ConfigPropertiesBridge.createForTest(
                 Collections.singletonMap("otel.traces.exporter", exporterName)),
             ImmutableMap.of(exporterName, ZipkinSpanExporter.builder().build()),
             MeterProvider.noop(),
@@ -171,7 +171,7 @@ class ConfigurableSpanExporterTest {
 
     List<SpanProcessor> spanProcessors =
         TracerProviderConfiguration.configureSpanProcessors(
-            DefaultConfigProperties.createForTest(
+            ConfigPropertiesBridge.createForTest(
                 Collections.singletonMap("otel.traces.exporter", "otlp,zipkin")),
             ImmutableMap.of(
                 "otlp",
@@ -213,7 +213,7 @@ class ConfigurableSpanExporterTest {
 
     List<SpanProcessor> spanProcessors =
         TracerProviderConfiguration.configureSpanProcessors(
-            DefaultConfigProperties.createForTest(
+            ConfigPropertiesBridge.createForTest(
                 Collections.singletonMap("otel.traces.exporter", "logging,zipkin")),
             ImmutableMap.of(
                 "logging",
