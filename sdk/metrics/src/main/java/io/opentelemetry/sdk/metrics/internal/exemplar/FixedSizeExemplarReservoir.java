@@ -17,6 +17,7 @@ import java.util.function.BiFunction;
 /** Base for fixed-size reservoir sampling of Exemplars. */
 abstract class FixedSizeExemplarReservoir<T extends ExemplarData> implements ExemplarReservoir<T> {
 
+  private final Clock clock;
   private final ReservoirCell[] storage;
   private final ReservoirCellSelector reservoirCellSelector;
   private final BiFunction<ReservoirCell, Attributes, T> mapAndResetCell;
@@ -28,10 +29,8 @@ abstract class FixedSizeExemplarReservoir<T extends ExemplarData> implements Exe
       int size,
       ReservoirCellSelector reservoirCellSelector,
       BiFunction<ReservoirCell, Attributes, T> mapAndResetCell) {
+    this.clock = clock;
     this.storage = new ReservoirCell[size];
-    for (int i = 0; i < size; ++i) {
-      this.storage[i] = new ReservoirCell(clock);
-    }
     this.reservoirCellSelector = reservoirCellSelector;
     this.mapAndResetCell = mapAndResetCell;
   }
@@ -40,6 +39,9 @@ abstract class FixedSizeExemplarReservoir<T extends ExemplarData> implements Exe
   public void offerLongMeasurement(long value, Attributes attributes, Context context) {
     int bucket = reservoirCellSelector.reservoirCellIndexFor(storage, value, attributes, context);
     if (bucket != -1) {
+      if (this.storage[bucket] == null) {
+        this.storage[bucket] = new ReservoirCell(clock);
+      }
       this.storage[bucket].recordLongMeasurement(value, attributes, context);
       this.hasMeasurements = true;
     }
@@ -49,6 +51,9 @@ abstract class FixedSizeExemplarReservoir<T extends ExemplarData> implements Exe
   public void offerDoubleMeasurement(double value, Attributes attributes, Context context) {
     int bucket = reservoirCellSelector.reservoirCellIndexFor(storage, value, attributes, context);
     if (bucket != -1) {
+      if (this.storage[bucket] == null) {
+        this.storage[bucket] = new ReservoirCell(clock);
+      }
       this.storage[bucket].recordDoubleMeasurement(value, attributes, context);
       this.hasMeasurements = true;
     }
@@ -63,6 +68,9 @@ abstract class FixedSizeExemplarReservoir<T extends ExemplarData> implements Exe
     // could still be sampling exemplars during this process.
     List<T> results = new ArrayList<>();
     for (ReservoirCell reservoirCell : this.storage) {
+      if (reservoirCell == null) {
+        continue;
+      }
       T result = mapAndResetCell.apply(reservoirCell, pointAttributes);
       if (result != null) {
         results.add(result);
