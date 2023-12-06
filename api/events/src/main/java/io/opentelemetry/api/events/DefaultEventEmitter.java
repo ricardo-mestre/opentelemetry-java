@@ -23,12 +23,6 @@ class DefaultEventEmitter implements EventEmitter {
   }
 
   @Override
-  public void emit(String eventName) {}
-
-  @Override
-  public void emit(String eventName, AnyValue<?> payload) {}
-
-  @Override
   public EventBuilder builder(String eventName) {
     return NoOpEventBuilder.INSTANCE;
   }
@@ -38,7 +32,7 @@ class DefaultEventEmitter implements EventEmitter {
     public static final EventBuilder INSTANCE = new NoOpEventBuilder();
 
     @Override
-    public EventBuilder setPayload(AnyValue<?> payload) {
+    public EventBuilder put(String key, AnyValue<?> value) {
       return this;
     }
 

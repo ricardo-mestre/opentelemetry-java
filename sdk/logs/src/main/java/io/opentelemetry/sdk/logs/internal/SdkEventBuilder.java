@@ -5,6 +5,7 @@
 
 package io.opentelemetry.sdk.logs.internal;
 
+import io.opentelemetry.api.common.AttributeKey;
 import io.opentelemetry.api.common.Attributes;
 import io.opentelemetry.api.events.EventBuilder;
 import io.opentelemetry.api.logs.LogRecordBuilder;
@@ -14,9 +15,15 @@ import io.opentelemetry.extension.incubator.logs.AnyValue;
 import io.opentelemetry.extension.incubator.logs.ExtendedLogRecordBuilder;
 import io.opentelemetry.sdk.common.Clock;
 import java.time.Instant;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 class SdkEventBuilder implements EventBuilder {
+
+  private static final AttributeKey<String> EVENT_NAME = AttributeKey.stringKey("event.name");
+
+  private final Map<String, AnyValue<?>> payload = new HashMap<>();
   private final Clock clock;
   private final LogRecordBuilder logRecordBuilder;
   private final String eventName;
@@ -29,8 +36,8 @@ class SdkEventBuilder implements EventBuilder {
   }
 
   @Override
-  public EventBuilder setPayload(AnyValue<?> payload) {
-    ((ExtendedLogRecordBuilder) logRecordBuilder).setBody(payload);
+  public EventBuilder put(String key, AnyValue<?> value) {
+    payload.put(key, value);
     return this;
   }
 
@@ -69,11 +76,12 @@ class SdkEventBuilder implements EventBuilder {
   @Override
   public void emit() {
     long now = clock.now();
+    ((ExtendedLogRecordBuilder) logRecordBuilder).setBody(AnyValue.of(payload));
     logRecordBuilder.setObservedTimestamp(now, TimeUnit.NANOSECONDS);
     if (!hasTimestamp) {
       logRecordBuilder.setTimestamp(now, TimeUnit.NANOSECONDS);
     }
-    SdkEventEmitterProvider.addEventName(logRecordBuilder, eventName);
+    logRecordBuilder.setAttribute(EVENT_NAME, eventName);
     logRecordBuilder.emit();
   }
 }

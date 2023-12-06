@@ -25,7 +25,11 @@ final class AnyValueArray implements AnyValue<List<AnyValue<?>>> {
     Objects.requireNonNull(value, "value must not be null");
     List<AnyValue<?>> list = new ArrayList<>(value.length);
     list.addAll(Arrays.asList(value));
-    return new AnyValueArray(Collections.unmodifiableList(list));
+    return create(list);
+  }
+
+  static AnyValue<List<AnyValue<?>>> create(List<AnyValue<?>> value) {
+    return new AnyValueArray(Collections.unmodifiableList(value));
   }
 
   @Override

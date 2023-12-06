@@ -5,8 +5,6 @@
 
 package io.opentelemetry.api.events;
 
-import io.opentelemetry.extension.incubator.logs.AnyValue;
-import java.util.Map;
 import javax.annotation.concurrent.ThreadSafe;
 
 /**
@@ -14,7 +12,7 @@ import javax.annotation.concurrent.ThreadSafe;
  *
  * <p>Example usage emitting events:
  *
- * <p>// TODO: rework
+ * <p>
  *
  * <pre>{@code
  * class MyClass {
@@ -22,9 +20,10 @@ import javax.annotation.concurrent.ThreadSafe;
  *         .build();
  *
  *   void doWork() {
- *     eventEmitter.emit("namespace.my-event", AnyValue.of(Map.of(
- *        "key1", AnyValue.of("value1"),
- *        "key2", AnyValue.of("value2"))));
+ *     eventEmitter.builder("namespace.my-event")
+ *       .put("key1", "value1")
+ *       .put("key2", "value2")
+ *       .emit();
  *     // do work
  *   }
  * }
@@ -32,39 +31,6 @@ import javax.annotation.concurrent.ThreadSafe;
  */
 @ThreadSafe
 public interface EventEmitter {
-
-  /**
-   * Emit an event.
-   *
-   * @param eventName the event name, which defines the class or type of event. Events names SHOULD
-   *     include a namespace to avoid collisions with other event names.
-   */
-  void emit(String eventName);
-
-  /**
-   * Emit an event.
-   *
-   * @param eventName the event name, which defines the class or type of event. Events names SHOULD
-   *     include a namespace to avoid collisions with other event names.
-   * @param payload the eventPayload, which is expected to match the schema of other events with the
-   *     same {@code eventName}.
-   */
-  void emit(String eventName, AnyValue<?> payload);
-
-  /**
-   * Emit an event.
-   *
-   * <p>This is equivalent to calling {@link #emit(String, AnyValue)} with a {@link
-   * AnyValue#of(Map)} payload.
-   *
-   * @param eventName the event name, which defines the class or type of event. Events names SHOULD
-   *     include a namespace to avoid collisions with other event names.
-   * @param payload the eventPayload, which is expected to match the schema of other events with the
-   *     same {@code eventName}.
-   */
-  default void emit(String eventName, Map<String, AnyValue<?>> payload) {
-    emit(eventName, AnyValue.of(payload));
-  }
 
   /**
    * Return a {@link EventBuilder} to emit an event.
